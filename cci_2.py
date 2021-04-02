@@ -221,10 +221,30 @@ def eight(head):
 		hare = hare.next
 		if hare is not None: hare = hare.next
 
-	return not hare is None
+	if hare is None: return None # No loop, we're done
+
+	# Mathematical trickery: When the two meet, tortoise will have stepped x times,
+	# and hare will have stepped 2x times. Say the tortoise enters the loop at step k,
+	# then at that moment the hare will be at k + (k % l), where l is the size of the loop.
+	# At this moment the hare is k%l steps ahead of the tortoise in the loop, which means it
+	# is equivalently l - k%l steps behind the tortoise and will catch it in that many
+	# additional steps. So x = k + l - (k % l). This I don't know how to solve analytically.
+	# Not sure it can be. But think about what it means: We took k steps to get to the loop,
+	# then l - k%l steps in to the loop. This is equivalent to saying we're k%l steps from
+	# completing the loop, which is the same as k steps if we're willing to potentially go
+	# around multiple times. k is also the distance from the beginning of the list to the
+	# start of the loop, so if we put a pointer back there and iterate forward, then when
+	# the two meet, it will be at the loop's beginning.
+
+	hare = head
+	tortoise = tortoise.next # hare moves, tortoise moves too, otherwise they're off by one and never meet
+	while hare != tortoise:
+		tortoise = tortoise.next
+		hare = hare.next
+	return tortoise.val
 
 ll = Node(1, Node(2, Node(3, Node(4, Node(5, Node(6, Node(7, Node(8, Node(9)))))))))
-assert not eight(ll)
+assert eight(ll) is None
 ll.next.next.next.next.next.next.next.next.next = ll.next.next.next
 # print(ll) runs forever now, but basically 9 points back to 4
-assert eight(ll)
+assert eight(ll) == 4
