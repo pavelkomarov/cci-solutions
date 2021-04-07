@@ -19,7 +19,6 @@ for p in range(11):
 	elif p < 0.5: assert p2 < p
 	elif p == 0.5 or p == 1: assert p2 == p
 	elif p < 1: assert p2 > p
-		
 
 # It's at 0.5 that p2 overtakes p1. I at first thought p2 would always be greater than p1, but I
 # guess it makes sense, because if your likelihood of making one shot is low, then p^2 and p^3 will
@@ -147,7 +146,7 @@ assert i-1 == 10
 # +------+------+------+------+
 # | 0000 | 0001 | 0010 | 0011 |
 # +------+------+------+------+
-# | 0100 | 0101 | 0110 | 0111 |
+# | 0100 | 0101 | 0110 | 0111 |		Side length of this table is 2^(|num bits we've got|/2)
 # +------+------+------+------+
 # | 1000 | 1001 | 1010 | 1011 |
 # +------+------+------+------+
