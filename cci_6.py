@@ -1,20 +1,25 @@
-print("==one==")
+#print("==one==")
 # For each of our 20 bottles, put different numbers of pills in each one. The first gets 1,
 # next 2, and so on. The total weight should come out to be 1+2+3+...20 if we have only
 # 1.0g pills = 20*(21)//2 grams
-print(20*21//2) # = 210
+assert 20*21//2 == 210
 # If the first bottle has the heavy pills, then the result will be 210.1, if it's the second,
 # then 210.2 ... 212.0 for the last bottle.
 
-print("==two==")
+#print("==two==")
 # game 1: probability of winning = p
 # game 2: probability of winning = (3 choose 2) * p^2 * (1-p)^1 + (3 choose 3) * p^3 * (1-p)^0
 import math
 
-for p in range(10):
+for p in range(11):
 	p /= 10
 	p2 = math.comb(3,2)* p**2 * (1-p) + p**3
-	print(p, p2)
+	#print(p, p2)
+	if p == 0: assert p2 == 0
+	elif p < 0.5: assert p2 < p
+	elif p == 0.5 or p == 1: assert p2 == p
+	elif p < 1: assert p2 > p
+		
 
 # It's at 0.5 that p2 overtakes p1. I at first thought p2 would always be greater than p1, but I
 # guess it makes sense, because if your likelihood of making one shot is low, then p^2 and p^3 will
@@ -51,7 +56,7 @@ for p in range(10):
 # If four, then each assumes there are three, but doesn't see anyone leave that day, concludes four,
 # leaves day 4. So num days = num people with blue eyes.
 
-print("==seven==")
+#print("==seven==")
 # 50% of the time you get a girl and stop, say string 0
 # 50% of what remains you get a boy, then a girl and stop, say 10
 # 50% of remaining you get 110
@@ -71,12 +76,12 @@ for i in range(10000):
 		r = random.randint(0,1)
 	g += 1
 
-print(b, g)
+assert abs(b-g) / 10000 < 0.05
 # This makes intuitive sense after I see it coded. Basically you have a big random string of 0s
 # and 1s, where the probability of each is independent and 50/50. You basically split the string
 # up at each 0 by imposing the apocalypse queen rule, but you don't change its contents.
 
-print("==eight==")
+#print("==eight==")
 # classic egg drop. The unfortunate thing about this problem is it's always phrased as "You have
 # N floors and d drops" or "You have N floors and k eggs" "How many eggs/drops does it take in
 # the worst case to find f, the first floor where the egg breaks/last one where it doesn't?",
@@ -98,7 +103,7 @@ while table[-1] < 100:
 	next_row = [0, 1+table[0]+table[1], 1+table[1]+table[2]]
 	table = next_row
 	d += 1
-print(d)
+assert d == 14
 
 # Alternative math-based solution for exactly two eggs: We want to balance their drops so
 # |egg1 drops| + |egg2 drops| = d. As egg1 survives more drops, egg2 should have 1 fewer floors to
@@ -110,9 +115,9 @@ print(d)
 # d + (d-1) + (d-2) + (d-3) ... 2 + 1 = 100. We can sum up the left side with Euler's trick:
 # d*(d+1)//2 = 100, and if we take the ceiling of the solution, we get d = 14.
 d = (-0.5 + math.sqrt(0.5**2 - 4*0.5*(-100)))/(2*0.5)
-print(math.ceil(d))
+assert math.ceil(d) == 14
 
-print("==nine==")
+#print("==nine==")
 l = [0]*100
 for i in range(0,100):
 	for j in range(i,100,i+1):
@@ -123,15 +128,15 @@ for i in range(0,100):
 # an odd number of factors?" Insight: The number of factors a number has is always even, unless one of
 # the factors is repeated, making the number a perfect square!
 import numpy
-print(numpy.where(numpy.array(l)==1)[0] + 1)
+assert list(numpy.where(numpy.array(l)==1)[0] + 1) == [1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
 
 # There are, of course, 10 perfect squares <=100, because 100 is 10^2
 i = 1
 while i*i <= 100:
 	i += 1
-print(i-1)
+assert i-1 == 10
 
-print("==ten==")
+#print("==ten==")
 # This is very similar to the error correction puzzles/codes 3blue1brown has videos about.
 # https://www.youtube.com/watch?v=b3NxrZOu_CE
 # 1000 bottles is just under 32^2 = 1024, so array the bottles in a 32x32 grid. Put drops from the
@@ -167,5 +172,5 @@ for i in range(10):
 		answer |= (1 << i)
 answer += 1 # to get back to 1-indexed
 
-print(poisoned, answer)
+assert poisoned == answer
 # So it can be done in a single batch of tests and only takes as long as it takes to get them back
