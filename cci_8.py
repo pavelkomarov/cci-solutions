@@ -123,12 +123,49 @@ def four(s):
 assert len(four(set([1,2,3,4]))) == 16 # sum i = 0 to 4 (4 choose i) = 16
 assert str(four(set([1,2]))) == "[set(), {2}, {1}, {1, 2}]"
 
-#def five()
+def five(a,b):
+	if a > b: return five(b,a)
+	if a == 1: return b
 
+	# drive smaller number to 1
+	v = five(a >> 1, b)
+	if a % 2 == 0:
+		return v+v
+	else:
+		return v+v + b
 
+assert five(278, 597) == five(597, 278) == 278*597
 
+def six(t1, t2, t3):
+	c = [0]
+	
+	def move(n, fr, to, e):
+		c[0] += 1
+		# move n rings from the `fr` stack to the `to` stack using the `e` stack
+		# as the intermediary
+		if n == 1:
+			to.append(fr.pop())
+		else:
+			move(n-1, fr, e, to) # move one fewer from `fr` to `e` using `to` as intermediary
+			to.append(fr.pop()) # move the nth single largest bottom ring from `fr` to `to`. intermediary not relevant
+			move(n-1, e, to, fr) # move the n-1 that we moved to `e` earlier from `e` to `to` using `fr` as intermediary
+		
+		# Make sure all towers are decreasing at the end of each move call
+		for tower in [t1,t2,t3]:
+			for i in range(1,len(tower)):
+				assert tower[i] < tower[i-1]
 
+	move(len(t1), t1, t3, t2)
+	return c[0] # I wanted to know how big this recursion gets
 
+N = 5
+t1 = list(range(N,0,-1))
+t2 = []
+t3 = []
+assert six(t1,t2,t3) == (1 << N) - 1 # turns out you make 2^N - 1 moves
+assert t1 == []
+assert t2 == []
+assert t3 == list(range(N,0,-1))
 
 
 
