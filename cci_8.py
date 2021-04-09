@@ -331,26 +331,26 @@ def thirteen(boxes):
 	boxes.reverse() 	# alphabetizing, so (5,5,4) comes before (5,5,5), and then reverse
 	memo = {} # ith box -> the max height possible with this box as bottom
 
-	def recurse(i): # The key here is that when we run up against the next box that will fit,
-		# it's always best to make that the next box. The ith box is *included* in some
-		# subsequence that's being selected from the boxes, and each call picks the jth.
+	def recurse(i): # The ith box is *included* in some subsequence that's being selected
+		# from the boxes, and each new call picks the best jth next box based on which, when
+		# serving as base for the remaining tower, maximizes additional height. When we run
+		# up against a next box that will fit, assume it's correct, and compute forward. 
 		if i in memo: return memo[i]
 		b1 = boxes[i]
 		m = b1[2]
 		for j,b2 in enumerate(boxes[i+1:]):
 			if b2[0] < b1[0] and b2[1] < b1[1] and b2[2] < b1[2]:
-				m += recurse(i+1 + j)
-				break
+				m = max(m, b1[2] + recurse(i+1 + j))
 		memo[i] = m
 		return m
 
 	# pick the best first box, and the recurrence will take care of picking the next-best
 	return max([recurse(i) for i in range(len(boxes))])
 
-boxes = [(100,100,1),(10,10,10),(5,5,4),(5,5,5),(50,40,9),(1,1,20),(9,9,9),(1,1,1)]
-assert thirteen(boxes) == 25
+boxes = [(100,100,1),(10,10,10),(5,5,4),(4,4,6),(50,40,9),(1,1,20),(9,9,9),(1,1,1)]
+assert thirteen(boxes) == 26
 boxes[-1] = (1,5,1)
-assert thirteen(boxes) == 24
+assert thirteen(boxes) == 25
 boxes[5] = (1,1,100)
 assert thirteen(boxes) == 100
 
@@ -416,15 +416,11 @@ def fourteen(s, result, save_space=True):
 				nB, B = recurse(s[i+1:])
 
 				# we're almost taking a cartesian product of possibilities
-				AB = A*B
-				nAB = nA*B
-				AnB = A*nB
-				nAnB = nA*nB
-				U = AB + nAB + AnB + nAnB
+				U = (A + nA)*(B + nB)
 
-				if s[i] == '&': T = AB # both have to be true
-				elif s[i] == '|': T = U - nAnB # either or both can be true
-				elif s[i] == '^': T = AnB + nAB # have to be opposite
+				if s[i] == '&': T = A*B # both have to be true
+				elif s[i] == '|': T = U - nA*nB # either or both can be true
+				elif s[i] == '^': T = U - A*B - nA*nB # have to be opposite
 
 				p[1] += T
 				p[0] += U - T
