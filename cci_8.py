@@ -167,5 +167,272 @@ assert t1 == []
 assert t2 == []
 assert t3 == list(range(N,0,-1))
 
+def seven(s):
+	# The strategy here is insertion: abcde -> a inserted at all possible locations
+	# in all permutations of bcde, bcde -> b inserted at all possible locations in
+	# all permutations of cde ... e -> e itself.
+	if len(s) == 1: return [s]
 
+	a = s[0]
+	R = seven(s[1:])
+	p = []
+	for r in R:
+		p += [r[:i] + a + r[i:] for i in range(len(r)+1)]
+	return p
+	
+from math import factorial, prod
 
+s = "abcde"
+perms = seven(s)
+assert len(perms) == factorial(len(s))
+assert len(set(perms)) == factorial(len(s))
+for p in perms: assert set(p) == set(s)
+
+from collections import Counter
+
+def eight(s):
+	# Rather than insertion, this one works better with an alternative recurrence:
+	# abcde -> a + all permutations of bcde, b + all permutations of acde, etc. This
+	# is equally legitimate, because the a + perms part gives all terms where a begins
+	# a permutation, b + for b, etc., and the terms where a is at different locations
+	# will be taken care of in terms from other parts.
+	def recurse(c):
+		if len(c) == 1: # base case
+			for a in c: break
+			return [a*c[a]] # So something like "aaaaaaaaa" finishes immediately
+
+		p = []
+		for a in c:
+			new_c = {k:v for k,v in c.items() if k != a}
+			if c[a] > 1: new_c[a] = c[a]-1
+			p += [a + r for r in recurse(new_c)]
+		
+		return p
+
+	return recurse(Counter(s))
+
+s = "ABCAAC"
+perms = eight(s)
+assert len(perms) == len(set(perms))
+c = Counter(s)
+assert len(perms) == factorial(len(s))//prod([factorial(v) for v in c.values()])
+
+def nine(n, build=True):
+	if not build:
+		# less efficient way, because there are some duplicates between ()+r and r+(),
+		# which we have to loop through and remove
+		if n == 1: return ["()"]
+		R = nine(n-1)
+		p = ["(" + r + ")" for r in R]
+		p += ["()" + r for r in R]
+		p += [r + "()" for r in R]
+		return set(p) # looping through and removing duplicates, basically
+
+	else:
+		def recurse(prefix, l, r):
+			# More efficient way. l is number of ( remaining to insert, r is number of )
+			# remaining to insert. If l > 0, then we can insert a (. If l < r, meaning
+			# more l inserted so far, then we can insert a ).
+			if l == 0 and r == 0: return [prefix]
+
+			p = []
+			if l > 0:
+				p += recurse(prefix + "(", l-1, r)
+			if l < r:
+				p += recurse(prefix + ")", l, r-1)
+			return p
+
+		return recurse("", n, n)
+
+parens = nine(5)
+assert len(parens) == len(set(parens))
+for p in parens:
+	c = Counter(p)
+	assert c[')'] == c['(']
+
+def ten(screen, p, c):
+	k = screen[p]
+
+	def recurse(i,j):
+		screen[i,j] = c
+
+		for y,x in [(i+1,j),(i,j+1),(i-1,j),(i,j-1)]:
+			if 0 <= x < screen.shape[0] and 0 <= y < screen.shape[1] and \
+				screen[y,x] == k:
+				recurse(y,x)
+
+	recurse(*p)
+
+screen = numpy.zeros((10,10))
+screen[:,4] = 1
+ten(screen, (2,4), 9)
+assert numpy.sum(screen) == 90
+assert numpy.all(screen[:,4] == 9)
+
+def eleven(n):
+	# This is similar to the stairs, question 1, except 1,5 and 5,1 are considered the
+	# same. The recurrence ends up being very different:
+	# T[n, {1,5,10,25}] = T[n, {1,5,10}] -> using no quarters to get n
+	#					+ T[n-25, {1,5,10}] -> using 1 quarter and having n-25 left
+	#				 ...+ T[n-25x, {1,5,10}] -> x is the largest int such that n-25x > 0
+	# This gives us all possible ways of introducing quarters. We repeat for dimes and
+	# nickels. But when we get to only pennies we know there's only one way to build
+	# up to whatever the residual value is. So the base case is T[n, {1}] = 1.
+	memo = {} # repeat calls with the same inputs are possible.
+	coins = [1,5,10,25]
+	
+	def recurse(n, ndx):
+		# I was originally sending ever-smaller copies of coins down, but better
+		# to keep one coins array and just index it.
+		if ndx == 0: return 1 # when we get down to pennies, only one way
+		elif (n, ndx) in memo: return memo[(n, ndx)]
+
+		s = 0
+		c = coins[ndx]
+		m = n
+		while m >= 0:
+			s += recurse(m, ndx-1)
+			m -= c
+		memo[(n, ndx)] = s
+		return s
+
+	return recurse(n, len(coins)-1)
+
+assert eleven(25) == 13
+
+def twelve(n):
+	# encode queen placement as a list of 8 numbers in [0,7], so the ith
+	# queen is at (i, Q[i])
+	def recurse(placed):
+		if len(placed) == n: return [placed]
+		p = []
+		i = len(placed)
+		for c in range(n): # next queen will be at (i,c)
+			# if this choice of `c` doesn't interfere with any already-placed
+			# queen, then we won't break, and we'll reach the else
+			for j,q in enumerate(placed): # formerly placed is at (j,q)
+				if c == q or i+c == j+q or i-j == c-q:
+					break
+			else:
+				p += recurse(placed + [c])
+		return p
+
+	return recurse([])
+
+queens = twelve(8)
+# https://en.wikipedia.org/wiki/Eight_queens_puzzle is known to have 92 solutions
+assert len(queens) == len(set(tuple(q) for q in queens)) == 92
+for q in queens: assert len(set(q)) == 8
+
+def thirteen(boxes):
+	# sort boxes by decreasing width, so they're at least kind of in order: earlier boxes
+	# must come before later boxes.
+	boxes = sorted(boxes) # python sorts tuples really nicely on all indices, similar to
+	boxes.reverse() 	# alphabetizing, so (5,5,4) comes before (5,5,5), and then reverse
+	memo = {} # ith box -> the max height possible with this box as bottom
+
+	def recurse(i): # The key here is that when we run up against the next box that will fit,
+		# it's always best to make that the next box. The ith box is *included* in some
+		# subsequence that's being selected from the boxes, and each call picks the jth.
+		if i in memo: return memo[i]
+		b1 = boxes[i]
+		m = b1[2]
+		for j,b2 in enumerate(boxes[i+1:]):
+			if b2[0] < b1[0] and b2[1] < b1[1] and b2[2] < b1[2]:
+				m += recurse(i+1 + j)
+				break
+		memo[i] = m
+		return m
+
+	# pick the best first box, and the recurrence will take care of picking the next-best
+	return max([recurse(i) for i in range(len(boxes))])
+
+boxes = [(100,100,1),(10,10,10),(5,5,4),(5,5,5),(50,40,9),(1,1,20),(9,9,9),(1,1,1)]
+assert thirteen(boxes) == 25
+boxes[-1] = (1,5,1)
+assert thirteen(boxes) == 24
+boxes[5] = (1,1,100)
+assert thirteen(boxes) == 100
+
+def fourteen(s, result, save_space=True):
+	# expression alternates symbol,operator,symbol,operator,symbol. We can split around any
+	# operator.
+	if not save_space:
+		# This is the way I came up with initially. It wasn't clear to me exactly how to sum
+		# up the counts, so I just recursively evaluated everything. The trouble with that is
+		# you have to keep a bunch of lists of boolean values around, which feels unnecessary.
+		def evaluate(s):
+			if len(s) == 1: return [False] if s == '0' else [True]
+
+			p = []
+			for i in range(1,len(s),2):
+				A = evaluate(s[:i])
+				B = evaluate(s[i+1:])
+
+				for a in A:
+					for b in B:
+						if s[i] == '&':
+							p.append(a and b)
+						elif s[i] == '|':
+							p.append(a or b)
+						elif s[i] == '^':
+							p.append(a ^ b)
+
+			return p
+
+		return sum(e==result for e in evaluate(s))
+
+	else:
+		# Had to peek at the solutions to get this insight: Every sub-expression, will evaluate
+		# to some number of trues and some number of falses based on where you put parentheses.
+		#
+		# If you think of all these trues and falses for expression A strung out along the edge
+		# of a truth table, and you put the trues and falses from a second expression, B, along
+		# the other edge, then the table has U := |A| x |B| elements, and how you fill it depends
+		# on the operator.
+		#
+		# If it's a &, then only the quadrant where A is true and B is true will be true. This
+		# will have |A = true| x |B = true| values.
+		#
+		# If it's a |, then only the quadrant where A is false and B is false will be false.
+		# So you'll have U - |A = false| x |B = false| trues.
+		# 
+		# And for ^ there are |A = true| x |B = false| + |A = false| x |B = true| trues.
+		#
+		# And then of course for the number of falses it's just the complement U - T, where T
+		# is the number of trues for whatever operator.
+		#
+		# The brilliant thing is we don't have to compute these massive tables, because if we
+		# know |A = true|, |A = false|, |B = true|, |B = false|, we can get everything we need!
+		memo = {} # there will be repeated calls, especially for smaller substrings
+
+		def recurse(s): # return (num false, num true)
+			if len(s) == 1: return (0,1) if s == '1' else (1,0)
+			if s in memo: return memo[s]
+
+			p = [0,0]
+			for i in range(1,len(s),2):
+				nA, A = recurse(s[:i])
+				nB, B = recurse(s[i+1:])
+
+				# we're almost taking a cartesian product of possibilities
+				AB = A*B
+				nAB = nA*B
+				AnB = A*nB
+				nAnB = nA*nB
+				U = AB + nAB + AnB + nAnB
+
+				if s[i] == '&': T = AB # both have to be true
+				elif s[i] == '|': T = U - nAnB # either or both can be true
+				elif s[i] == '^': T = AnB + nAB # have to be opposite
+
+				p[1] += T
+				p[0] += U - T
+
+			memo[s] = p
+			return p
+
+		return recurse(s)[int(result)]
+
+assert fourteen("1^0|0|1", False, save_space=False) == fourteen("1^0|0|1", False) == 2
+assert fourteen("0&0&0&1^1|0", True, save_space=False) == fourteen("0&0&0&1^1|0", True) == 10
