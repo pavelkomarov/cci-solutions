@@ -18,4 +18,10 @@ Chapter names:
 8. Recursion and Dynamic Programming
 9. System Design and Scalability
 10. Sorting and Searching
-11. Testing 
+11. Testing
+12. C and C++ (skipping for now)
+13. Java (skipping for now)
+14. Databases
+15. Threads and Locks
+16. Moderate
+17. Hard
