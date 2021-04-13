@@ -301,8 +301,9 @@ def eleven(n):
 assert eleven(25) == 13
 
 def twelve(n):
-	# encode queen placement as a list of 8 numbers in [0,7], so the ith
-	# queen is at (i, Q[i])
+	# This one is all in the encoding: encode queen placement as a list of 8 numbers
+	# in [0,7], so the ith queen is at (i, Q[i]). Then go row by row, placing a new
+	# queen everywhere she doesn't interfere with all those placed so far.
 	def recurse(placed):
 		if len(placed) == n: return [placed]
 		p = []
@@ -311,8 +312,8 @@ def twelve(n):
 			# if this choice of `c` doesn't interfere with any already-placed
 			# queen, then we won't break, and we'll reach the else
 			for j,q in enumerate(placed): # formerly placed is at (j,q)
-				if c == q or i+c == j+q or i-j == c-q:
-					break
+				if c == q or i+c == j+q or i-j == c-q: # tricky diagonal expressions.
+					break								# I always have to draw them out.
 			else:
 				p += recurse(placed + [c])
 		return p

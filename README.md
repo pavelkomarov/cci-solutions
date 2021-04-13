@@ -14,5 +14,8 @@ Chapter names:
 4. Trees and Graphs
 5. Bit Manipulation
 6. Math and Logic Puzzles
-7. Object-Oriented Design
+7. Object-Oriented Design [WIP]
 8. Recursion and Dynamic Programming
+9. System Design and Scalability
+10. Sorting and Searching
+11. Testing 
