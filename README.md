@@ -6,6 +6,8 @@ I've named files like `cci_#.py`, where `#` is a chapter number. All answers for
 Some helpful utility classes I've had to build along the way:
 - `from cci_02 import Node` for linked lists
 - `from cci_04 import TreeNode` for binary trees
+- `from cci_10 import BitVector` for a bit map
+Note that these imports run all the code in the corresponding files, because I haven't been careful enough to put things in `if __name__ == '__main__':` blocks.
 
 Chapter names:
 1. Arrays and Strings

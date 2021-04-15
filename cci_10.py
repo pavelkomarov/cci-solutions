@@ -1,4 +1,45 @@
 
+import numpy
+
+class BitVector: # a bit vector class, worth implementing
+	def __init__(self, l):
+		self.v = numpy.zeros(-(-l//32), dtype=int)
+		self.l = l
+
+	def __getitem__(self, i):
+		if i >= self.l: raise ValueError("index out of range")
+		div, mod = divmod(i, 32)
+		return (self.v[div] >> mod) & 1
+
+	def __setitem__(self, i, x):
+		if i >= self.l: raise ValueError("index out of range")
+		div, mod = divmod(i, 32)
+		self.v[div] = self.v[div] | (1 << mod)
+
+	def __repr__(self):
+		s = "["
+		for x in self.v:
+			for i in range(32):
+				s += "1" if (x >> i) & 1 else "0"
+			s += '\n '
+		return s[:-2] + "]"
+
+bv = BitVector(100)
+assert len(bv.v) == 4 # it takes 4*32 > 100
+for i in range(100):
+	assert bv[i] == 0
+	bv[i] = 1
+	assert bv[i] == 1
+try:
+	bv[101]
+	assert False
+except ValueError:
+	assert True
+assert str(bv) == "[11111111111111111111111111111111\n" + \
+				  " 11111111111111111111111111111111\n" + \
+				  " 11111111111111111111111111111111\n" + \
+				  " 11110000000000000000000000000000]" # 32*3 = 96, so 4 1s left over for last entry
+
 def one(A, B):
 	i = len(A) - 1 # end location in A
 	a = len(A) - len(B) - 1 # location of last filled value in A
@@ -169,100 +210,75 @@ assert five(S, "ball") == 4
 assert five(S, "car") is None
 
 # Six
-# I'd probably do a merge sort on the lines. First just take little chunks of 5 lines or so and sort
-# them, then merge, merge, merge, merge up to the full 20 GB. We used to do this for alphabetizing
-# graded tests when I was a CS TA. You'd need auxiliary space for this, not a ton if you delete info
-# from the original file as you copy and mergesort it elsewhere. You couldn't really do a quicksort
-# so easily, because lines might have different lengths, so swapping them around each other would
-# result in overlaps unless you shift *everything* in between, which is gross. You could do many many
-# buckets if you want, since there are only a limited number of characters. But you'd need something
-# like 26 or 256 depending on your alphabet size for just the first character, and then branch again.
-# ends up being not at all O(n). You could do a prefix tree, inserting and then in-order traversing,
-# but that seems like it's also going to take a whole bunch of extra storage and is more complicated
-# than just merge sort. I'm back to merge sort. It's probably best. No code for this one.
+# I'd do a merge sort on the lines. First just take little chunks of 5 lines or so and sort them,
+# then merge, merge, merge, merge up to the full 20 GB. We used to do this for alphabetizing graded
+# tests when I was a CS TA. You'd need auxiliary space for this, not a ton if you delete info from
+# the original file as you copy and mergesort it elsewhere. You couldn't really do a quicksort so
+# easily, because lines might have different lengths, so swapping them around each other would
+# result in overlaps unless you shift *everything* in between, which is gross.
 
 # Seven
-# My guess is they're not sorted, or I could just traverse through the file until I find a couple
-# numbers with a space between them. I can't use a standard set, because the numbers won't fit in
-# memory, but is there a more memory-efficient way to mark what's been seen? I have 1 GB for 4 billion
-# non-negative ints. If I use 1 bit per number and mark bits via appropriate bit manipulation, then I
-# need 4 billion / 8 bits per byte = 0.5 GB array to store what's been seen. Then I can go through that
-# array looking for an unmarked bit. This is O(n). In the case I have a billion numbers and only 10 MB
-# of memory, I'm about an order of magnitude short of being able to take that strategy, so I'd say I
-# have to sort the numbers. I'd use merge sort: I shouldn't have to read more than a couple lines from
-# files I'm trying to merge; I can keep moving a pointer through each file with readLine() calls. When
-# I get to the last merge, I should be able to tell a missing integer by the end of the operation, if
-# one exists. Ooo! Interesting idea from the hints: Rather than sort, we can take the same bit-vector
-# approach, but perform multiple passes. Since we know numbers are unique, so I can just look at the
-# first ~1/10th of numbers on [0, 1 billion], tossing any that don't fit my bit vector. If there's a 0
-# in there at the end, I return the location, if not, I check the next tenth, and so on. Interesting
-# alternative, from the solutions: Let's make an array a million long, where each array location keeps
-# track of the number of numbers seen on ranges a thousand long each. Because numbers are unique, if we
-# have a full range, the total in a bucket will come out to be 1000. So look for a bucket with a total
-# <1000, and then iterate over the data again, minding only numbers from that range, to find what a
-# missing one is. Wrinkle: Numbers are just specified to be nonnegative ints, so I actually need to
-# consider [0, maxint] in some of these approaches, but ultimately it just means bit vectors or buckets
-# of slightly different size.
-"""
-nums = list(range(1000000000))
-nums[500000000] = 1000000000 # at the 500 millionth location we get a missing value
+# The way to do this if you have tons of memory is to just create a gigantic bit vector to keep track
+# of what has been seen. Iterate back through looking for an unset bit, and there's your missing
+# number. An alternative if you have limited memory is to do this over smaller ranges, but if we have
+# 2^31 possible nonnegative ints and only a little over 2^26 bits in 10 MB, then we might have to do
+# 32 passes in order to find what's missing. At that point, may as well sort the numbers and look for
+# a gap, because log(1 billion) is like 29, which is < 32. A clever alternative from the solutions is
+# to establish ranges of numbers and iterate through the array counting how many fall on each range.
+# Since numbers must be unique, we can tell that a range that hasn't completely filled must have
+# something missing. Then we can go back and make a bit vector just for that range, iterate the big
+# array again, tossing things outside the range, setting bits within, then iterate the bit vector
+# looking for a 0 just like before.
+missing = 500000
+nums = numpy.arange(1000000) # do this in megabytes rather than gigabytes for time.
+nums[missing] = 1000000 # at the 500 millionth location we get a missing value
+numpy.random.shuffle(nums)
 
-chunk = 2**26 # 2^26 bits will give me 8.389 MB, which fits under the 10 limit
-for i in range(32): # maxint ~= 2^31 / 2^26 = 32, so I have to do 32 chunks -> 32 passes in worst case
-	print(i)
-	bv = Eight(chunk)
-	for n in nums:
-		if i*chunk <= n < (i+1)*chunk:
-			bv[n-i*chunk] = 1
-	for j in range(chunk):
-		if bv[j] == 0:
-			print(i*chunk + j)
-""" # Each pass takes ages, so 32 vs 2 is not going to cut the mustard. Buckets is the way.
+# Let's pretend I have 10 kilobytes instead of 10 megabytes. I can fit a little over 2^16 bits.
+# That's 2^14 bytes, so I can have that many buckets. 2^31/2^14 = 2^17, which is what I expect
+# my buckets to fill to if there's no empty space on a range.
+n_buckets = 2**14
+bucket_size = 2**31 // n_buckets
+
+buckets = numpy.zeros(n_buckets, dtype=int)
+for n in nums:
+	buckets[n//bucket_size] += 1
+
+for i,b in enumerate(buckets):
+	if b < bucket_size: break
+
+bv = BitVector(bucket_size)
+ibsz = i*bucket_size
+ibszz = ibsz + bucket_size
+for n in nums:
+	if ibsz <= n < ibszz:
+		bv[n-ibsz] = 1
+
+for z in range(bucket_size):
+	if bv[z] == 0: break
+
+assert ibsz + z == missing
 
 # Eight
 # Another bit vector. A kilobyte is 1024*8 bits, and we have 4 of them, so that gets us over 32000. We
 # can mark when things have been seen, and when we see them again, print, or store to file, or, if few
 # enough, keep in that little tiny extra bit of memory.
-import numpy
+from random import randint, shuffle
 
-class Eight: # a bit vector class, worth implementing
-	def __init__(self, l):
-		self.v = numpy.zeros(-(-l//32), dtype=int)
-		self.l = l
+N = 32000
+nums = list(range(N))
+randomz = [randint(0,N-1) for i in range(30)]
+nums += randomz
+shuffle(nums)
 
-	def __getitem__(self, i):
-		if i >= self.l: raise ValueError("index out of range")
-		div, mod = divmod(i, 32)
-		return (self.v[div] >> mod) & 1
+bv = BitVector(N)
+dups = []
+for n in nums:
+	if bv[n]: dups.append(n)
+	else: bv[n] = 1
 
-	def __setitem__(self, i, x):
-		if i >= self.l: raise ValueError("index out of range")
-		div, mod = divmod(i, 32)
-		self.v[div] = self.v[div] | (1 << mod)
+assert sorted(randomz) == sorted(dups)
 
-	def __repr__(self):
-		s = "["
-		for x in self.v:
-			for i in range(32):
-				s += "1" if (x >> i) & 1 else "0"
-			s += '\n '
-		return s[:-2] + "]"
-
-bv = Eight(100)
-assert len(bv.v) == 4 # it takes 4*32 > 100
-for i in range(100):
-	assert bv[i] == 0
-	bv[i] = 1
-	assert bv[i] == 1
-try:
-	bv[101]
-	assert False
-except ValueError:
-	assert True
-assert str(bv) == "[11111111111111111111111111111111\n" + \
-				  " 11111111111111111111111111111111\n" + \
-				  " 11111111111111111111111111111111\n" + \
-				  " 11110000000000000000000000000000]" # 32*3 = 96, so 4 1s left over for last entry
 # To print duplicates, simply make one of these and iterate your array. When we encounter a number,
 # is that bit set? If yes, print, if no, set the bit.
 
@@ -407,10 +423,8 @@ def eleven(A):
 			A[i-1] = c
 		# otherwise we're gucci already, because b is largest
 
-	# It's possible the element thing wasn't included in a trio, so swap if needed
+	# It's possible the last element wasn't included in a trio, so swap if needed
 	if len(A) % 2 == 0 and A[-1] < A[-2]: A[-2:] = reversed(A[-2:])
-
-from random import shuffle
 
 for i,A in enumerate([[5,3,1,2,3], [1,2,3,4,5,6,7,8,9,0], list(range(100))]):
 	if i == 2: shuffle(A)
