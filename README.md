@@ -1,12 +1,13 @@
 # cci-solutions
 My solutions to exercises in Cracking the Coding Interview, in Python.
 
-I've named files like `cci_#.py`, where `#` is a chapter number. All answers for a chapter are written in a single file, with little `assert`s to test each one right after its implementation. Simply run the file to check all these tests.
+I've named files like `cci_##.py`, where `##` is a chapter number. All answers for a chapter are written in a single file, with little `assert`s to test each one right after its implementation. Simply run the file to check all these tests.
 
 Some helpful utility classes I've had to build along the way:
 - `from cci_02 import Node` for linked lists
 - `from cci_04 import TreeNode` for binary trees
 - `from cci_10 import BitVector` for a bit map
+
 Note that these imports run all the code in the corresponding files, because I haven't been careful enough to put things in `if __name__ == '__main__':` blocks.
 
 Chapter names:
