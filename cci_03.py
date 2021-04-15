@@ -167,7 +167,7 @@ five(stack)
 assert stack == [5,4,3,2,1]
 
 
-from cci_2 import Node
+from cci_02 import Node
 
 class Six:
 	def __init__(self):

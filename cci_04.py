@@ -63,7 +63,7 @@ tree = two(range(10))
 assert str(tree) == "[5, 2, 8, 1, 4, 7, 9, 0, _, 3, _, 6]"
 assert str(two(range(15))) == "[7, 3, 11, 1, 5, 9, 13, 0, 2, 4, 6, 8, 10, 12, 14]"
 
-from cci_2 import Node
+from cci_02 import Node
 
 def three(root):
 	lls = []
