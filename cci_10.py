@@ -217,52 +217,64 @@ assert five(S, "car") is None
 # easily, because lines might have different lengths, so swapping them around each other would
 # result in overlaps unless you shift *everything* in between, which is gross.
 
-# Seven
-# The way to do this if you have tons of memory is to just create a gigantic bit vector to keep track
-# of what has been seen. Iterate back through looking for an unset bit, and there's your missing
-# number. An alternative if you have limited memory is to do this over smaller ranges, but if we have
-# 2^31 possible nonnegative ints and only a little over 2^26 bits in 10 MB, then we might have to do
-# 32 passes in order to find what's missing. At that point, may as well sort the numbers and look for
-# a gap, because log(1 billion) is like 29, which is < 32. A clever alternative from the solutions is
-# to establish ranges of numbers and iterate through the array counting how many fall on each range.
-# Since numbers must be unique, we can tell that a range that hasn't completely filled must have
-# something missing. Then we can go back and make a bit vector just for that range, iterate the big
-# array again, tossing things outside the range, setting bits within, then iterate the bit vector
-# looking for a 0 just like before.
-missing = 500000
+def seven(nums):
+	# The way to do this if you have tons of memory is to just create a gigantic bit vector to keep track
+	# of what has been seen. Iterate back through looking for an unset bit, and there's your missing
+	# number. An alternative if you have limited memory is to do this over smaller ranges, but if we have
+	# 2^31 possible nonnegative ints and only a little over 2^26 bits in 10 MB, then we might have to do
+	# 32 passes in order to cover the full range. Though we could get lucky and find a missing number much
+	# earlier, 1 billion is about 2^30, so we could very well end up deep in, and at that point, may as
+	# well sort the numbers and look for a gap, because log(1 billion) is 29.897, which is < 32. A clever
+	# alternative from the solutions is to establish ranges of numbers and iterate through the array
+	# counting how many fall on each range. Since numbers must be unique, we can tell that a range which
+	# hasn't completely filled must have something missing. Then we can go back and make a bit vector just
+	# for that range, iterate the big array again, tossing things outside the range, setting bits within,
+	# then iterate the bit vector looking for a 0 just like before.
+
+	# Let's pretend I have 10 kilobytes instead of 10 megabytes. I can fit a little over 2^16 bits.
+	# That's 2^14 bytes, so I can have that many buckets. 2^31/2^14 = 2^17, which is what I expect
+	# my buckets to fill to if there's no empty space on a range.
+	n_buckets = 2**14
+	bucket_size = 2**31 // n_buckets
+
+	buckets = numpy.zeros(n_buckets, dtype=int)
+	for n in nums:
+		buckets[n//bucket_size] += 1
+
+	for i,b in enumerate(buckets):
+		if b < bucket_size: break
+
+	bv = BitVector(bucket_size)
+	ibsz = i*bucket_size
+	ibszz = ibsz + bucket_size
+	for n in nums:
+		if ibsz <= n < ibszz:
+			bv[n-ibsz] = 1
+
+	for z in range(bucket_size):
+		if bv[z] == 0: break
+
+	return ibsz + z
+
+missing = 500005
 nums = numpy.arange(1000000) # do this in megabytes rather than gigabytes for time.
-nums[missing] = 1000000 # at the 500 millionth location we get a missing value
+nums[missing] = 1000000 # at the 500 thousanth location we get a missing value
 numpy.random.shuffle(nums)
 
-# Let's pretend I have 10 kilobytes instead of 10 megabytes. I can fit a little over 2^16 bits.
-# That's 2^14 bytes, so I can have that many buckets. 2^31/2^14 = 2^17, which is what I expect
-# my buckets to fill to if there's no empty space on a range.
-n_buckets = 2**14
-bucket_size = 2**31 // n_buckets
+assert seven(nums) == missing
 
-buckets = numpy.zeros(n_buckets, dtype=int)
-for n in nums:
-	buckets[n//bucket_size] += 1
+def eight(nums):
+	# Another bit vector. A kilobyte is 1024*8 bits, and we have 4 of them, so that gets us over
+	# 32000. We can mark when things have been seen, and when we see them again, print, or store
+	# to file, or, if few enough, keep in that little tiny extra bit of memory.
+	bv = BitVector(N)
+	dups = []
+	for n in nums:
+		if bv[n]: dups.append(n)
+		else: bv[n] = 1
 
-for i,b in enumerate(buckets):
-	if b < bucket_size: break
+	return dups
 
-bv = BitVector(bucket_size)
-ibsz = i*bucket_size
-ibszz = ibsz + bucket_size
-for n in nums:
-	if ibsz <= n < ibszz:
-		bv[n-ibsz] = 1
-
-for z in range(bucket_size):
-	if bv[z] == 0: break
-
-assert ibsz + z == missing
-
-# Eight
-# Another bit vector. A kilobyte is 1024*8 bits, and we have 4 of them, so that gets us over 32000. We
-# can mark when things have been seen, and when we see them again, print, or store to file, or, if few
-# enough, keep in that little tiny extra bit of memory.
 from random import randint, shuffle
 
 N = 32000
@@ -271,16 +283,7 @@ randomz = [randint(0,N-1) for i in range(30)]
 nums += randomz
 shuffle(nums)
 
-bv = BitVector(N)
-dups = []
-for n in nums:
-	if bv[n]: dups.append(n)
-	else: bv[n] = 1
-
-assert sorted(randomz) == sorted(dups)
-
-# To print duplicates, simply make one of these and iterate your array. When we encounter a number,
-# is that bit set? If yes, print, if no, set the bit.
+assert sorted(eight(nums)) == sorted(randomz)
 
 def nine(matrix, x):
 	# Any rows/cols that have start > x or end < x can't contain x.
