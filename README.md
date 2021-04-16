@@ -12,20 +12,20 @@ Some helpful utilities I've had to build and use along the way:
 Note that when importing all the code in the corresponding file gets run, because I haven't been careful enough to put things in `if __name__ == '__main__':` blocks.
 
 Chapter names:
-1. [x] Arrays and Strings
-2. [x] Linked Lists
-3. [x] Stacks and Queues
-4. [x] Trees and Graphs
-5. [x] Bit Manipulation
-6. [x] Math and Logic Puzzles
-7. [ ] Object-Oriented Design (work in progress)
-8. [x] Recursion and Dynamic Programming
-9. [x] System Design and Scalability
-10. [x] Sorting and Searching
-11. [x] Testing
-12. [ ] C and C++ (skipping for now)
-13. [ ] Java (skipping for now)
-14. [x] Databases
-15. [ ] Threads and Locks
-16. [ ] Moderate
-17. [ ] Hard
+- [x] 1. Arrays and Strings
+- [x] 2. Linked Lists
+- [x] 3. Stacks and Queues
+- [x] 4. Trees and Graphs
+- [x] 5. Bit Manipulation
+- [x] 6. Math and Logic Puzzles
+- [ ] 7. Object-Oriented Design (work in progress)
+- [x] 8. Recursion and Dynamic Programming
+- [x] 9. System Design and Scalability
+- [x] 10. Sorting and Searching
+- [x] 11. Testing
+- [ ] 12. C and C++ (skipping for now)
+- [ ] 13. Java (skipping for now)
+- [x] 14. Databases
+- [ ] 15. Threads and Locks
+- [ ] 16. Moderate
+- [ ] 17. Hard
