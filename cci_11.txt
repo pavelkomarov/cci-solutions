@@ -15,7 +15,3 @@ The pen will be used by humans, who hold and write with pens in an established w
 
 Six
 What do we need the ATM to do? Keep video, be locked and secure, take identifying info from people, communicate with the network or specify "out of service" if it can't connect, take and disburse cash, display what it wants to users, have convenient inputs/outputs for information. All this should be user-tested for intuitiveness and security. On the backend we need servers listening for communications from ATMs. We need a database of people's balances, debts, credit cards, addresses, etc. We need that information to be secure, so we probably need a lot of encryption going on between server and ATMs. We should have tests to ensure we can read and write from the database seamlessly and securely. These could likely be automated.
-
-
-
-
