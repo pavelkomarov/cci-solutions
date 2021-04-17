@@ -28,6 +28,6 @@ Chapter names:
 - [ ] 12. C and C++ (skipping for now)
 - [ ] 13. Java (skipping for now)
 - [x] 14. Databases
-- [ ] 15. Threads and Locks
+- [x] 15. Threads and Locks
 - [ ] 16. Moderate
 - [ ] 17. Hard
