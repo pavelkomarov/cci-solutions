@@ -212,14 +212,14 @@ def seven(n):
 	# implemented with a few semaphores, but there was too much jostle in the system when removing
 	# the sleep statements. I don't know why or how, but I'd see one of my threads check twice while
 	# another wouldn't at all, even though all should have been hitting their wait() statements.
-	# Doens't make any sense. A way around this is to give each thread its own i to increment, which
+	# Doesn't make any sense. A way around this is to give each thread its own i to increment, which
 	# is what I did when I solved this on Leetcode, and is what Gayle does in the solutions.
 	out = []
 	barrier = Barrier(4) # The Barrier is a convenient way to solve this. The solutions use a static
 							# lock with a bunch of thread instances all trying to chaotically print
 	def count():			# at the same time, most just recognizing they can't and releasing.
-		for i in range(1, n+1):
-			if i % 3 != 0 and i % 5 != 0:
+		for i in range(1, n+1):				# Barrier is better, even though it's tucked away at the
+			if i % 3 != 0 and i % 5 != 0:	# end of the documentation.
 				out.append(str(i))
 			barrier.wait()
 
