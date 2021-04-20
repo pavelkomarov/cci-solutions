@@ -302,6 +302,111 @@ assert eight(4823749018) == "four billion eight hundred twenty three million sev
 assert eight(1000090) == "one million ninety"
 assert eight(-8000403) == "negative eight million four hundred three"
 
+class Nine:
+
+	@staticmethod
+	def multiply(a, b):
+		if b > a: return Nine.multiply(b, a) # faster if smaller number second
+
+		x = 0
+		flip = b < 0
+		if flip: b = ~b + 1
+		
+		for i in range(b):
+			x += a
+		
+		if flip: x = ~x + 1
+		return x
+
+	@staticmethod
+	def divide(a, b):
+		# This one is annoying, because 11//2 = -11/-2 = 5, but -11//2 = 11/-2 = -6
+		# Gayle's solution actually completely ignores this complexity, just letting
+		# 11/-2 = -5, but I account for it.
+		if a == 0: return 0
+		if b == 0: raise ValueError("denominator is zero")
+
+		flipa = a < 0
+		flipb = b < 0
+		if flipa: a = ~a + 1
+		if flipb: b = ~b + 1
+
+		x = 0
+		c = b
+		while c < a:
+			c += b
+			x += 1
+		# x is now = the number of times |b| goes in to |a| if they don't divide evenly.
+		# If they do divide evenly, then c == a. If the answer is positive, we need to
+		# add this last, but not so if the answer is negative: 10//2 = 4 + 1 = 5, but
+		# -10/2 = ~4 = -5. Yet 9//2 = 4 + 0, and -9//2 = ~4 = -5.
+
+		if flipa ^ flipb: x = ~x # no +1 here, because 5,-6 are bitwise mirrors already
+		elif c == a: x += 1
+		return x
+
+	@staticmethod
+	def subtract(a, b):
+		return a + ~b + 1
+
+nine = Nine()
+for i in range(-10,10):
+	for j in range(-10, 10):
+		assert nine.multiply(i,j) == i*j
+		if j != 0: assert nine.divide(i,j) == i//j
+		assert nine.subtract(i,j) == i - j
+
+def ten(peeps):
+	dpeeps = [0]*102 # keep an array of how population *changes* over time, like a derivative
+	for p in peeps:
+		dpeeps[p[0]-1900] += 1
+		dpeeps[p[1]+1-1900] -= 1 # death is applied to the *next* year's count
+
+	t = 0
+	tmax = 0
+	y = 0
+	for i,d in enumerate(dpeeps):
+		t += d
+		if t > tmax:
+			tmax = t
+			y = i + 1900
+
+	return y
+
+assert ten([(1900,1950), (1927,1985), (1945,2000), (1990,2000),
+			(1987,2000), (1905,1970), (1963,1985), (1957,1975)]) == 1963
+
+from collections import defaultdict
+
+def eleven(shorter, longer, K, recurse=False):
+	if recurse: # O(K^2) even with the memoization, because of the way the recursive tree
+		d = set()	# branches out. I had to draw it to get this intuition.
+		seen = set()
+
+		def recurse(l_so_far, K_left):
+			if K_left == 1:
+				d.add(l_so_far+shorter)
+				d.add(l_so_far+longer)
+
+			else:
+				for choice in [(l_so_far+shorter, K_left-1), (l_so_far+longer, K_left-1)]:
+					if choice not in seen:
+						seen.add(choice)
+						recurse(*choice)
+
+		recurse(0, K)
+		return list(d)
+	else:
+		# Based on the fact all solutions made of i short planks and K-i long planks will
+		# have the same length, we can just loop through finding what those lengths are.
+		# We don't have to care about all 2^K specific arrangements of planks.
+		d = []
+		for i in range(K+1): # O(K)
+			d.append((K-i)*shorter + i*longer)
+		return d
+
+assert eleven(1, 3, 10, recurse=True) == eleven(1, 3, 10, recurse=False) == \
+		[10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
 
 
 
