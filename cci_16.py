@@ -234,7 +234,7 @@ for sort_both in [True, False]:
 	assert six(A, B, sort_both) == 0
 	B = B[:-1]
 
-def seven(a, b):
+def seven(a, b): # find max without >, <, or an if statement
 	# first pass, not accounting for overflow.
 	# k = ((b - a) >> 31) & 1 # b - a > 0 if b > a, so sign bit is 0 -> k = 0; k = 1 if a > b
 
