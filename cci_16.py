@@ -376,8 +376,6 @@ def ten(peeps):
 assert ten([(1900,1950), (1927,1985), (1945,2000), (1990,2000),
 			(1987,2000), (1905,1970), (1963,1985), (1957,1975)]) == 1963
 
-from collections import defaultdict
-
 def eleven(shorter, longer, K, recurse=False):
 	if recurse: # O(K^2) even with the memoization, because of the way the recursive tree
 		d = set()	# branches out. I had to draw it to get this intuition.
@@ -408,5 +406,286 @@ def eleven(shorter, longer, K, recurse=False):
 assert eleven(1, 3, 10, recurse=True) == eleven(1, 3, 10, recurse=False) == \
 		[10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]
 
+from xml.etree import ElementTree
 
+def twelve(root, mapping):
+	# ElementTree nodes have .tag, .text, children in, and a .attrib dictionary
+	def recurse(node):
+		s = []
+		s.append(str(mapping[node.tag]))
+
+		for a,b in node.attrib.items():
+			s.append(str(mapping[a]))
+			s.append(b)
+		s.append("0")
+
+		t = node.text.strip()
+		if len(t) > 0: s.append(t)
+
+		for child in node:
+			s += recurse(child)
+
+		s.append("0")
+		return s
+	
+	return ' '.join(recurse(root))
+
+mapping = {"family":1, "person":2, "firstName":3, "lastName":4, "state":5}
+xml = """
+<family lastName="McDowell" state="CA">
+	<person firstName="Gayle">Some Message</person>
+</family>
+"""
+assert twelve(ElementTree.fromstring(xml), mapping) == "1 4 McDowell 5 CA 0 2 3 Gayle 0 Some Message 0 0"
+
+def thirteen(square1, square2):
+	# midpoints of squares
+	x1bar = (square1[0][0] + square1[3][0])/2.0
+	y1bar = (square1[0][1] + square1[1][1])/2.0
+	x2bar = (square2[0][0] + square2[3][0])/2.0
+	y2bar = (square2[0][1] + square2[1][1])/2.0
+
+	if x1bar != x2bar: # squares aren't perfectly stacked
+		m = (y1bar - y2bar)/(x1bar - x2bar)
+		b = y1bar - m*x1bar
+	elif y1bar == y2bar:
+		m = 0
+		b = y1bar
+	else: # degenerate case
+		m = float('inf')
+		b = float('-inf')
+
+	return m, b
+
+# square given as lower left, upper left, upper right, lower right
+square1 = [(1,1),(1,2),(2,2),(2,1)]
+square2 = [(3,2),(3,3),(4,3),(4,2)]
+assert thirteen(square1, square2) == (0.5, 0.75)
+assert thirteen(square1, square1) == (0, 1.5)
+square2 = [(0,1),(0,3),(2,3),(2,1)]
+assert thirteen(square1, square2) == (-1.0, 3.0)
+square2 = [(1,0),(1,1),(2,1),(2,0)]
+assert thirteen(square1, square2) == (float('inf'), float('-inf'))
+
+from collections import defaultdict
+
+def fourteen(points):
+	n = len(points)
+	d = defaultdict(int)
+	g = 0
+
+	for i in range(n):
+		for j in range(i+1,n):
+
+			if points[i][0] != points[j][0]: # squares aren't perfectly stacked
+				m = (points[i][1] - points[j][1])/(points[i][0] - points[j][0])
+				b = points[i][1] - m*points[i][0]
+			else: # degenerate case
+				m = float('inf')
+				b = points[i][0] # to distinguish vertical lines, I'm making b the x intercept here
+
+			d[m,b] += 1 # hashing with floats can be dicey in some languages, but it works here
+			if d[m,b] > g:
+				g = d[m,b]
+				r = (m,b)
+
+	return r
+
+points = [(0,0), (0,1), (1,1), (2,2), (3,2), (3,1), (-1,-1), (2,-1)]
+assert fourteen(points) == (1.0, 0)
+points += [(3,0), (3,-1), (3,-2)]
+assert fourteen(points) == (float('inf'), 3) # infinite slope means b is x intercept
+
+def fifteen(solution, guess):
+	sc = Counter(solution)
+	gc = Counter(guess)
+
+	hits = 0
+	for i in range(4):
+		if solution[i] == guess[i]:
+			hits += 1
+			l = solution[i]
+			sc[l] -= 1 # so these letters can never be used for pseudo-hits
+			gc[l] -= 1
+
+	pseudos = 0
+	for l in gc:
+		if sc[l] > 0 and gc[l] > 0:
+			pseudos += 1
+			sc[l] -= 1
+			gc[l] -= 1
+
+	return hits, pseudos
+
+assert fifteen("RGBY", "GGRR") == (1,1)
+assert fifteen("RGGB", "YRGB") == (2,1)
+assert fifteen("RGGB", "RRGB") == (3,0)
+
+def sixteen(A):
+	m = False
+
+	x = float('inf')
+	for i in reversed(range(len(A))): # find min as we go
+		a = A[i]
+		if a <= x: x = a
+		else: m = i # The last index where a > min found so far (min should go left of a, but isn't)
+
+	x = float("-inf")
+	for i,a in enumerate(A): # find max as we go
+		if a >= x: x = a
+		else: n = i # The last index where a < max found so far (max should go right of a, but isn't)
+
+	return (m, n) if m is not False else "already sorted"
+
+assert sixteen([1,2,4,7,10,11,7,12,6,7,16,18,19]) == (3,9)
+assert sixteen([1]*11) == "already sorted"
+assert sixteen(range(10)) == "already sorted"
+assert sixteen(list(range(10)) + [-1]) == (0,10)
+assert sixteen([1,2,3,5,4,6,7,8]) == (3,4)
+
+def seventeen(A):
+	# The idea here is to calculate running sums, resetting every time the running sum dips
+	# below 0. The largest running sum is the largest subarray sum.
+	s = 0 # running sum
+	w = 0 # new beginning location
+	m = float('-inf') # max sum found so far
+	for i,n in enumerate(A):
+		s += n # running sum
+		if s > m: # If the running sum beats the max,
+			m = s # then the max is this sum
+			v = i # It ends here
+			u = w # and it started at the last start point
+		if s <= 0: # reset
+			w = i+1 # new start point will be after the entry that caused us to go negative
+			s = 0 # sum is 0 at worst by just excluding the current entry
+	
+	return m, A[u:v+1]
+
+assert seventeen([2, -8, 3, -2, 4, -10]) == (5, [3, -2, 4])
+assert seventeen([-1]) == (-1, [-1])
+assert seventeen([-2,1,-3,4,-1,2,1,-5,4]) == (6, [4,-1,2,1])
+
+def eighteen(value, pattern):
+	# Insight: if we have "catcatgocatgo" and "aabab", then we can let k = 1 and try a = [:k] = 'c'.
+	# We know there are 3 as and 2 bs, so then the length of all the as is 3, so the length of the
+	# 2 bs must be (len(value) = 13) - 3 = 10, meaning each b has a length of 5. We know b first
+	# occurs as the third thing in pattern, so b = "tcatg". We can then see whether stacking these
+	# together according to the pattern matches the value. Repeat for different choices of k.
+	n = len(value)
+	c = Counter(pattern)
+	n_a = c['a']
+	n_b = c['b']
+	first_a = pattern.find('a')
+	first_b = pattern.find('b')
+	K = n+1-n_b if first_a == 0 else n+1-n_a # Has to be at least n_a or n_b characters left
+												# over, so len(a), len(b) never < 1
+	for k in range(1,K): # O(n)
+		if first_a == 0:
+			a = value[:k]
+			if n_b > 0:
+				len_b = (n - n_a*k)//n_b
+				b = value[first_b*k:first_b*k+len_b]
+		else:
+			b = value[:k]
+			if n_a > 0:
+				len_a = (n - n_b*k)//n_a
+				a = value[first_a*k:first_a*k+len_a]
+
+		i = 0
+		for x in pattern: # O(n): |a|*n_a + |b|*n_b = n
+			s = a if x == 'a' else b
+			l = len(s)
+			if value[i:i+l] == s: # match a or b against value
+				i += l
+			else:
+				break # this k doesn't work; try the next one
+		else: # if we never break, then success, all matches
+			return True
+
+	return False # No choice of k worked, so no match
+
+assert eighteen("catcatgocatgo","a")
+assert eighteen("catcatgocatgo","b")
+assert eighteen("catcatgocatgo","aabab")
+assert eighteen("catcatgocatgo","aab")
+assert eighteen("catcatgocatgo","bba")
+assert not eighteen("catcatgocatgo", "aaab")
+assert not eighteen("catcatgocatgo", "baaa")
+assert not eighteen("catcatgocatgo", "aaaaa")
+
+def nineteen(plot):
+	n = len(plot)
+	m = len(plot[0])
+	seen = set() # if you're willing to modify the input, you can mark locations visited by setting = -1
+	
+	def dfs(i, j):
+		seen.add((i,j))
+		t = 1
+		for y in [i+1, i, i-1]: # These two loops are a constant O(1), because only 9 combos
+			for x in [j+1, j, j-1]:
+				if (y,x) not in seen and 0 <= y < n and 0 <= x < m and plot[y][x] == 0:
+					t += dfs(y, x) # Goes as deep as the pond is large, which is at most O(n*m)
+		return t
+
+	ponds = []
+	for i in range(n):
+		for j in range(m):
+			if (i,j) not in seen and plot[i][j] == 0:
+				ponds.append(dfs(i, j))
+
+	return ponds
+
+plot = [[0, 2, 1, 0],
+		[0, 1, 0, 1],
+		[1, 1, 0, 1],
+		[0, 1, 0, 1]]
+assert set(nineteen(plot)) == set([2,4,1])
+
+def twenty(digits, dictionary):
+	digits = str(digits)
+	n = len(digits)
+	d = {'0':'', '1':'', '2':'abc', '3':'def', '4':'ghi', '5':'jkl',
+		'6':'mno', '7':'pqrs', '8':'tuv', '9':'wxyz'}
+	
+	def traverse(prefix, node, i):
+		if i == n: # base case
+			return [prefix] if 0 in node else []
+
+		r = [] # empty list gets returned if there's no way to keep traversing
+		for l in d[digits[i]]:
+			if l in node:
+				r += traverse(prefix+l, node[l], i+1)
+		return r
+
+	return traverse("", dictionary, 0)
+
+# I'm assuming I get my list of words as a prefix tree, which is usually drawn as nodes with
+# values = the path used to get to each one, but I'm assuming each node kind of just wraps a map,
+# so I can give it as a bunch of nested maps. I'm letting my end node be 0.
+dictionary = {'t':{'r':{'e':{'e':{0:0}}}}, 'u':{'s':{'e':{0:0,'d':{0:0}}}}}
+assert set(twenty(8733, dictionary)) == set(['tree', 'used'])
+assert twenty(873, dictionary) == ['use']
+assert twenty(92783, dictionary) == []
+
+def twentyone(A, B):
+	# gotta do some algebra: We know (a1 + a2 + a3 + ... + ax ...) - (b1 + b2 + b3 + ... + bx ...) = diff
+	# We can choose an ax and bx to swap such that the sums are equal, so:
+	# (a1 + a2 + a3 + ... + bx) - (b1 + b2 + b3 + ... + ax) = 0. Subtract the two equations:
+	# ax - bx - (bx - ax) = diff - 0 -> 2ax - 2bx = diff -> ax - bx = diff/2. With this we can
+	# find the matching ax for bx or vice versa if we have a candidate in mind. Checking existence
+	# is cheap.
+	c = Counter(A)
+	diff = sum(A) - sum(B) # O(|A| + |B|)
+	if diff % 2 != 0: return "impossible"
+	
+	for bx in B: # O(|B|)
+		ax = diff//2 + bx
+		if ax in c:
+			return ax, bx
+
+	return "impossible"
+
+assert twentyone([4,1,2,1,1,2], [3,6,3,3]) == (1, 3)
+assert twentyone([4,1,2,1,1,2], [3,6,3,4]) == "impossible"
+assert twentyone([100, 3], [1, 100]) == "impossible"
 

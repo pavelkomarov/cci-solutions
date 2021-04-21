@@ -13,23 +13,23 @@ Some helpful utilities I've had to build and use along the way:
 
 Note that when importing all the code in the corresponding file gets run, because I haven't been careful enough to put things in `if __name__ == '__main__':` blocks.
 
-| Done | Chapter names | n_completed | n_problems | 
-| --- | --- | --- | --- |
-| [x] | 1. Arrays and Strings | 9 | 9 |
-| [x] | 2. Linked Lists | 8 | 8 |
-| [x] | 3. Stacks and Queues |6 | 6 |
-| [x] | 4. Trees and Graphs | 12 | 12
-| [x] | 5. Bit Manipulation | 8 | 8 |
-| [x] | 6. Math and Logic Puzzles | 10 | 10 |
-| [ ] | 7. Object-Oriented Design | 1 | 9 |
-| [x] | 8. Recursion and Dynamic Programming | 14 | 14 |
-| [x] | 9. System Design and Scalability | 8 | 8 |
-| [x] | 10. Sorting and Searching | 11 | 11 |
-| [x] | 11. Testing | 6 | 6 |
-| [ ] | 12. C and C++ | 0 | 11 |
-| [ ] | 13. Java | 0 | 8 |
-| [x] | 14. Databases | 7 | 7 |
-| [x] | 15. Threads and Locks | 7 | 7 |
-| [ ] | 16. Moderate | 11 | 26 |
-| [ ] | 17. Hard | 0 | 26 |
-| | | Σ 118 | 186 |
+| Chapter names | n_problems | Done | 
+| --- | --- | --- |
+| 1. Arrays and Strings | 9 | ✓ |
+| 2. Linked Lists | 8 | ✓ |
+| 3. Stacks and Queues |6 | ✓ |
+| 4. Trees and Graphs | 12 | ✓ |
+| 5. Bit Manipulation | 8 | ✓ |
+| 6. Math and Logic Puzzles | 10 | ✓ |
+| 7. Object-Oriented Design | 9 | 1 |
+| 8. Recursion and Dynamic Programming | 14 | ✓ |
+| 9. System Design and Scalability | 8 | ✓ |
+| 10. Sorting and Searching | 11 | ✓ |
+| 11. Testing | 6 | ✓ |
+| 12. C and C++ | 11 | 0 |
+| 13. Java | 8 | 0 |
+| 14. Databases | 7 | ✓ |
+| 15. Threads and Locks | 7 | ✓ |
+| 16. Moderate | 26 | 21 |
+| 17. Hard | 26 | 0 |
+| | Σ 186 | 128 |

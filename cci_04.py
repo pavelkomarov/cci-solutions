@@ -4,7 +4,7 @@ class TreeNode:
 		self.val = val
 		self.left = left
 		self.right = right
-		self.parent = parent # unused in many problems
+		self.parent = parent # unused in most problems
 		self.size = size
 
 	def __repr__(self): # mirroring Leetcode's convention on this:
