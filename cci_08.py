@@ -68,7 +68,7 @@ assert two(grid) == ['right', 'right', 'right', 'down', 'down', 'down', 'right']
 grid[0,1] = 1
 assert two(grid) is None
 
-def three(A):
+def three(A): # "magic index"
 
 	def recurse(l, r):
 		if r < l: return None

@@ -1,15 +1,16 @@
 
 class Node:
-	def __init__(self, val, next=None):
+	def __init__(self, val, next=None, prev=None):
 		self.val = val
 		self.next = next
-		self.prev = None
+		self.prev = prev
 
 	def __repr__(self):
 		node = self
 		s = ""
 		while node is not None:
-			s += str(node.val) + "->"
+			arrow = "->" if node.next is None or node.next.prev is None else "<->" # double vs single
+			s += str(node.val) + arrow
 			node = node.next
 		return s
 

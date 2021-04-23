@@ -689,3 +689,269 @@ assert twentyone([4,1,2,1,1,2], [3,6,3,3]) == (1, 3)
 assert twentyone([4,1,2,1,1,2], [3,6,3,4]) == "impossible"
 assert twentyone([100, 3], [1, 100]) == "impossible"
 
+def twentytwo(K, verbose=False):
+	board = defaultdict(int) # you could also just keep a set of black squares, but I count visits
+	pos = [0,0] # stored y, x
+	maxx = 0
+	maxy = 0
+	minx = 0
+	miny = 0
+
+	def viz(visits=False):
+		v = "minx={0}, maxx={1}, miny={2}, maxy={3}\n".format(minx, maxx, miny, maxy)
+		for i in range(miny, maxy+1):
+			row = ""
+			for j in range(minx, maxx+1):
+				row += str(board[(i,j)]) if visits else str(board[(i,j)] % 2) 
+				if pos[0] == i and pos[1] == j: row += 'x'
+				row += ' '
+			v += row[:-1] + '\n'
+		return v
+
+	d = 0 # 0 = right, 1 = down, 2 = left, 3 = up
+	for step in range(K):
+		t = tuple(pos)
+		parity = board[t] % 2
+		board[t] += 1 # flip square
+
+		d = (d + 1 - 2*parity) % 4 # +1 if parity==0 (turn right), -1 if parity==1 (turn left)
+
+		if d == 0:
+			pos[1] += 1 # I'm considering right to be +x
+			maxx = max(maxx, pos[1])
+		elif d == 1:
+			pos[0] += 1 # I'm considering down to be +y
+			maxy = max(maxy, pos[0])
+		elif d == 2:
+			pos[1] -= 1
+			minx = min(minx, pos[1])
+		else: # d == 4
+			pos[0] -= 1
+			miny = min(miny, pos[0])
+
+		if verbose: print(viz(visits=True))
+		
+	return viz()
+
+assert twentytwo(10, verbose=False) == """minx=-1, maxx=1, miny=-1, maxy=1
+0x 0 1
+1 1 1
+1 1 0
+"""
+
+from random import randint
+
+def twentythree():
+	# We have a RV with pdf [0.2, 0.2, 0.2, 0.2, 0.2]. It's interesting to note that if we
+	# take two of these and add them, then the pdf looks like the convolution:
+	# [0.04, 0.08, 0.12, 0.16, 0.2 , 0.16, 0.12, 0.08, 0.04]. This has sort of a triangular
+	# shape (classic convolve two boxes), and if we keep convolving with that pdf (adding more
+	# RVs), then we end up with a gaussian. Interestingly, if we do this long enough and then
+	# "wrap" the distribution around some number, then we end up with a uniform distribution
+	# however long we want.
+	def wrap(pdf, mod): # I used a similar function to help me visualize what
+		r = [0]*mod		# mod does to a probability distribution.
+		for i,p in pdf:
+			r[i % mod] += p
+		return r
+	# But this requires many many RVs, and so many calls to rand5(), and it's still not exact,
+	# because 7 and 5 are prime, so 5*k can't be split in to 7 buckets evenly. I spent a while
+	# trying to wrap and convolve various wrapings and convolutions of the pdf and its derivatives,
+	# but I couldn't manage to get back a distribution with seven evenly-weighted entries.
+	#
+	# Here's a clever alternative: Consider two rand5() results to be digits in a base 5 number.
+	# We can construct our number in base 10 as 5*rand5() + rand5(). Why does this work? Well,
+	# that first term is basically spacing out the probability spikes. Now instead of deltas at
+	# 0,1,2,3,4, we get them at 0,5,10,15,20. If we convolve our old [0.2, 0.2, 0.2, 0.2, 0.2]
+	# with this new [0.2, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0.2, 0, 0, 0, 0, 0.2]
+	# then we get [0.04]*25. That's more than enough evenly-weighted things. If we were to take
+	# the mod of this, "wrapping" it, then we can get a shorter distribution. For instance,
+	# wrapping around 8, we get [0.16, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12, 0.12]. So basically if
+	# our number % 8 == 0, toss it, and if it's in [1,7], return that-1.
+	#
+	# Notice that 0,8,16,24 are the entries causing % 8 == 0, which leaves 25 - 4 = 21 entries
+	# from our original distribution. 21 is evenly divisible by 7, which is why we can assign
+	# an equal number of each of those possibilities to each bucket of rand7(). What do we do
+	# if % 8 == 0? We'll have to resample two rand5()s to generate a different number. The odds
+	# we have to do this are 4/25. So the pdf of the number of times we have to draw is f(k) =
+	# (4/25)^(k-1)*(1 - 4/25), and sum k = 1 to infinity f(k) = 1. E(X) = Σ x P(X = x) ->
+	# sum k = 1 to infinity k * f(k) = 1.1905, so this converges really quickly, and we expect
+	# to have draw only a little over once on average.
+	#
+	# We could shrink that expected value sum if we chose 3, 4, or more digits of a number to
+	# start. For 3, we have 125 % 7 = 6, and substituting in this probability we get 1.0504
+	# draws on average. For 4, we have 5^4 % 7 = 2, and we have to draw 1.0032 times on average.
+	# But these are more expensive draws, involving more calls to rand5(). 3*1.0504 and 4*1.0032
+	# are both > 2*1.1905, so better to draw fewer each time.
+	def rand5():
+		return randint(0,4)
+
+	while True:
+		n = (5*rand5() + rand5()) % 8
+		if n != 0:
+			return n - 1
+
+buckets = [0]*7
+for i in range(10000):
+	buckets[twentythree()] += 1
+for b in buckets:
+	assert abs(b/10000 - 1/7) < 0.01 # testing randomness is tricky
+
+def twentyfour(A, k):
+	c = Counter(A) # O(n)
+	pairs = []
+
+	for a in A: # O(n)
+		if c[k-a] > 0:
+			pairs.append((a, k-a))
+			c[k-a] -= 1
+			c[a] -= 1
+
+	return pairs
+
+A = [-5, 7, -10, 11, 14, 8, 4, 2, 19, 11]
+for k in [3, 19, -15, -8, 0]:
+	pairs = set(twentyfour(A, k))
+	for i in range(len(A)):
+		for j in range(i+1, len(A)):
+			if A[i] + A[j] == k:
+				assert (A[i], A[j]) in pairs or (A[j], A[i]) in pairs
+			else:
+				assert (A[i], A[j]) not in pairs and (A[j], A[i]) not in pairs
+
+# One of the hints poses the puzzle: If the array is already sorted, do it in O(n) time, O(1)
+# space. I'd use two pointers in the array. If the sum of those location is too large, bring
+# the upper one down. If it's too low, bring the lower one up. If we ever hit a sum of exactly
+# k, add the pair to our list.
+
+from cci_02 import Node
+
+class TwentyFive:
+	# LRU discards the least recently used items first. The key here is knowing which operations
+	# an LRU cache is supposed to support, brainstorming which data structures can handle it,
+	# implementing without making too many mistakes, and testing thoroughly.
+	#
+	# It turns out the way to make both insertion and retrieval/updating O(1) is to keep a map
+	# from key -> value node, and keep value nodes in a doubly-linked list. This way we can slice
+	# out and move any node, and nodes that roll off can be unlinked and deleted from the map.
+	def __init__(self, capacity):
+		self.map = {}
+		self.head = None # least recent at front, most recent at back
+		self.tail = None
+		self.c = capacity # I assume >= 1
+
+	def insert(self, k, v):
+		# Create a new node at the back. By inserting we consider this to be recently used.
+		node = Node((k,v), None, self.tail) # make cache node. Include key inside so we can remove
+											# from the map when something rolls out of the list.
+		self.map[k] = node # map to node
+		
+		if self.tail is not None: # insert node to back
+			self.tail.next = node
+		self.tail = node
+
+		if self.head is None: # in case node is first, it's both tail and head
+			self.head = node
+		elif len(self.map) > self.c: # remove front of list = Nix least recently used thing.
+			del self.map[self.head.val[0]]
+			self.head = self.head.next
+			self.head.prev = None
+
+	def retrieve(self, k):
+		# Take node from where it is and put it at the back. Return value.
+		node = self.map[k]
+
+		if node != self.tail: # if not already at the back
+			node.next.prev = node.prev # slice the node out
+			if node != self.head:
+				node.prev.next = node.next
+			else: # then this node is the head but not the tail -> there is more than one node
+				self.head = node.next	# -> the head reference needs to move forward
+				self.head.prev = None
+
+			self.tail.next = node # move node to tail
+			node.prev = self.tail
+			node.next = None
+			self.tail = node
+
+		# if the node is already the tail, we don't need to do anything.
+		return node.val[1]
+
+	def get_lru(self):
+		return self.head.val[1]
+
+	def update(self, k, v):
+		# Update the value, and move the node to the back.
+		self.retrieve(k)
+		self.tail.val = (k, v)
+
+cache = TwentyFive(4)
+cache.insert(0, 'A')
+assert cache.retrieve(0) == 'A'
+assert str(cache.head) == str(cache.tail) == "(0, 'A')->"
+cache.insert(1, 'B')
+assert cache.retrieve(0) == 'A'
+assert str(cache.head) == "(1, 'B')<->(0, 'A')->"
+assert cache.retrieve(1) == 'B'
+assert str(cache.head) == "(0, 'A')<->(1, 'B')->"
+cache.insert(2, 'C')
+cache.update(1, 'X')
+assert str(cache.head) == "(0, 'A')<->(2, 'C')<->(1, 'X')->"
+cache.insert(3, 'D')
+assert str(cache.head) == "(0, 'A')<->(2, 'C')<->(1, 'X')<->(3, 'D')->"
+assert str(cache.tail) == "(3, 'D')->"
+cache.insert(4, "E")
+assert str(cache.head) == "(2, 'C')<->(1, 'X')<->(3, 'D')<->(4, 'E')->"
+assert cache.retrieve(3) == 'D'
+assert str(cache.head) == "(2, 'C')<->(1, 'X')<->(4, 'E')<->(3, 'D')->"
+cache.insert(5, "F")
+assert str(cache.head) == "(1, 'X')<->(4, 'E')<->(3, 'D')<->(5, 'F')->"
+assert cache.retrieve(1) == 'X'
+assert str(cache.head) == "(4, 'E')<->(3, 'D')<->(5, 'F')<->(1, 'X')->"
+assert cache.retrieve(1) == 'X'
+assert str(cache.head) == "(4, 'E')<->(3, 'D')<->(5, 'F')<->(1, 'X')->"
+
+def twentysix(e):
+	# The cheat way to do this is return eval(e)
+	op1 = None # previous add or subtract operation
+	op2 = None # previous multiply or divide operation
+	a = 0 # sum of things to left of op1
+	b = 0 # product of things to left of op2
+	c = 0 # working right side of product
+
+	for i,x in enumerate(e + '+'): # finish on '+' so a,b,c get combined at very end
+		if x == '+' or x == '-' or x == '*' or x == '/':
+			if op2 == '*':  # join b and c in b always
+				b *= c
+			elif op2 == '/':
+				b /= c
+			else:
+				b = c
+
+			c = 0
+			op2 = x
+
+			if x == '+' or x == '-':
+				if op1 == '+':  # join a and b in a if + or -
+					a += b
+				elif op1 == '-':
+					a -= b
+				else:
+					a = b
+
+				b = 0
+				op1 = x
+				op2 = None
+
+		else: # x is a digit
+			c *= 10
+			c += int(x)
+
+	return a
+
+s = "2*3+5/6*3+15"
+assert twentysix(s) == eval(s)
+s += '-10'
+assert twentysix(s) == eval(s)
+s += '/15'
+assert twentysix(s) == eval(s)
