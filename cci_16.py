@@ -820,9 +820,9 @@ for k in [3, 19, -15, -8, 0]:
 				assert (A[i], A[j]) not in pairs and (A[j], A[i]) not in pairs
 
 # One of the hints poses the puzzle: If the array is already sorted, do it in O(n) time, O(1)
-# space. I'd use two pointers in the array. If the sum of those location is too large, bring
-# the upper one down. If it's too low, bring the lower one up. If we ever hit a sum of exactly
-# k, add the pair to our list.
+# space. I'd use two pointers starting at the beginning and end of the array. If the sum of those
+# location is too large, bring the upper one down. If it's too low, bring the lower one up. If we
+# ever hit a sum of exactly k, add the pair to our list.
 
 from cci_02 import Node
 
