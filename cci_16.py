@@ -191,11 +191,15 @@ def six(A, B, sort_both=False):
 		j = 0
 		
 		while i < n-1 or j < m-1:
+			if A[i] == B[j]: return 0
+
 			d = min(d, abs(A[i] - B[j]))
-			if A[i] <= B[j] and i < n-1:
-				i += 1
+			if A[i] < B[j]:
+				if i < n-1: i += 1
+				else: break
 			else:
-				j += 1
+				if j < m-1: j += 1
+				else: break
 
 		return d
 
@@ -220,19 +224,21 @@ def six(A, B, sort_both=False):
 					hi = mid - 1
 
 			# lo is now where i would be inserted in S (could be running off the end),
-			# and hi points to the thing with value just below.
+			# and hi points to the thing with value just below. Either could be closest.
 			if hi != -1: # Wrinkle: if nothing in S < i, then hi = -1
 				d = min(d, i - S[hi])
+			if lo != len(S): # and if nothing in S > i, then lo = len(S)
+				d = min(d, S[lo] - i)
 
 		return d
 
 A = [1,3,15,11,2]
 B = [23,127,235,19,8]
-for sort_both in [True, False]:
-	assert six(A, B, sort_both) == 3
+for ans in [3, 0]:
+	for sort_both in [True, False]:
+		for X,Y in [(A,B), (B,A)]:
+			assert six(X, Y, sort_both) == ans
 	B.append(15)
-	assert six(A, B, sort_both) == 0
-	B = B[:-1]
 
 def seven(a, b): # find max without >, <, or an if statement
 	# first pass, not accounting for overflow.
