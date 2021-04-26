@@ -1,7 +1,7 @@
 // compile with g++ cci_12.cc
 // run with ./a.out, the default output name
 #include <iostream> // so cout works
-#include <cassert> // so I can write little tests
+//#include <cassert> // so I can write little tests
 //using namespace std // allows you to not have to keep specifying std::thing
 
 #include <fstream> // for file io and printf
@@ -39,11 +39,11 @@ void two(char* str) {
 	char* q = str;
 	char a;
 	while (p > q) {
-		a = *q;
-		*q = *p;
-		*p = a;
-		p--;
-		q++;
+		a = *q; // is the value stored where q points
+		*q = *p; // where q points gets the value stored where p points
+		*p = a; // where p points gets value a
+		p--; // p now points at the previous location
+		q++; // q now points at the next location
 	}
 }
 
@@ -111,13 +111,14 @@ struct Node {
 typedef std::map<Node*, Node*> NodeMap;
 
 /**
- * & vs * is a challenge. Essentially * means we're taking a raw pointer, which holds an address, and &
- * means we're getting the address where something lives on the heap itself (calling by reference).
- * The distinction is subtle, but if you're not giving just x (calling by value), you have to do *x or &x.
+ * & vs * is a challenge. Essentially * means we're taking a raw pointer by value, which holds an address,
+ * and & means we're getting the address of something and then passing it in. The distinction is subtle and
+ * really only has to do with whether you're handing object refs or pointers; in both cases you pass in an
+ * address, which means we're effectively calling some object by reference.
  * https://stackoverflow.com/questions/5816719/difference-between-function-arguments-declared-with-and-in-c
  * https://stackoverflow.com/questions/114180/pointer-vs-reference
  */
-Node* eight(Node* node, NodeMap& dict) { // Perform DFS over Nodes, creating nodes as we visit
+Node* eight(Node* node, NodeMap& dict) { // Perform DFS over Nodes, creating nodes as we first visit
 	if (node == NULL) return NULL;
 	std::cout << node->val << "\n"; // print visit order
 
@@ -131,6 +132,95 @@ Node* eight(Node* node, NodeMap& dict) { // Perform DFS over Nodes, creating nod
 		next->right = eight(node->right, dict);
 		return next;
 	}
+}
+
+template <class T> class Nine { // smart pointer
+	// I'm out of my depth enough with C++ that I more or less had to just look at the solutions and carefully
+	// build up my understanding for this one. It showcases some language features.
+	public:
+		Nine(T* pointer) { // constructor given pointer to object
+			std::cout << "in first constructor" << '\n';
+			ref = pointer; // point to the same object as the pointer given
+			ref_count = (unsigned*) malloc(sizeof(unsigned)); // malloc unsigned int, and return pointer to that location.
+			*ref_count = 1; // increment the reference counter
+		}
+
+		Nine(Nine<T>& smart_pointer) { // constructor given another smart pointer
+			std::cout << "in second constructor" << '\n';
+			ref = smart_pointer.ref;
+			ref_count = smart_pointer.ref_count;
+			(*ref_count)++; // parens are important, because ++ binds more tightly
+		}
+
+		~Nine() {
+			std::cout << "in destructor" << '\n';
+			remove();
+		}
+
+		// "Override the equal operator, so that when you set one smart pionter equal to another, the old smart pointer
+		// has its reference count decremented adn the new smart pointer has its reference count incremented."
+		Nine<T>& operator=(Nine<T>& smart_pointer) {
+			std::cout << "in assignment" << '\n';
+			if (this == &smart_pointer) return *this; // I didn't realize this is a keyword in C++
+
+			if (*ref_count > 0) remove();
+
+			ref = smart_pointer.ref;
+			ref_count = smart_pointer.ref_count;
+			(*ref_count)++;
+			return *this;
+		}
+
+	protected:
+		T* ref; // the object this pointer points to
+		unsigned* ref_count; // point to the reference count, so this object can increment/decrement it.
+
+		void remove() {
+			std::cout << "in remove" << '\n';
+			(*ref_count)--;
+			if (*ref_count == 0) {
+				std::cout << "what a freeing feeling" << '\n';
+				delete ref; // like the del keyword I'm more familiar with
+				free(ref_count); // opposite of malloc
+				ref = NULL; // "If the operand to the delete operator is a modifiable l-value, its value is undefined
+				ref_count = NULL; // after the object is deleted." So set it explicitly so there's no undefined behavior.
+			}
+		}
+};
+
+void* ten_malloc(int size, int div) {
+	// Idea: malloc a bigger chunk, and then return from that chunk. We'll need our size + up to div-1 extra
+	// locations so we can find an address that's div-aligned within + room for a void pointer so we can store
+	// where this block *really* begins, so we can free it properly
+	void* p = malloc(size + div - 1 + sizeof(void*));
+	if (p == NULL) return NULL; // happens if the system can't allocate the memory
+	// To get the div-aligned location, we need (location) & ~(div - 1). div - 1 will give us log2(div) 1s on the right,
+	// and ~(div-1) will flip that around, so we have a bitmask with 1s everywhere except for 0s at the last log2(div)
+	// bits. That is, we chop off/waste at most div-1 bytes at the end of our malloced range. If we & directly with p,
+	// we'll end up before p's location, so we have to take p forward by div-1 so q lands somewhere in [p,p+div-1]. We
+	// also want that extra room for the extra void pointer, so q really lands in [p+sizeof(void*),p+sizeof(void*)+div-1].
+	// We also have to do some casting on p, because the fact it's a void pointer means the system isn't sure how many
+	// bytes to skip when we do arithmetic operations, and we actually just want to operate by single bytes.
+	void* q = (void*) (((long) p + div - 1 + sizeof(void*)) & ~(div - 1));
+	((void**) q)[-1] = p; // pretend q is a pointer to a void pointer rather than a void pointer itself, and now
+	return q;			// we can go one void pointer's width backwards and store p there.
+}
+
+void ten_free(void* q) {
+	std::cout << "I want to break free!\n";
+	void* p = ((void**) q)[-1];
+	free(p);
+}
+
+int** eleven(int n, int m) {
+	int** arr = (int**) malloc(n*m*sizeof(int) + n*sizeof(int*)); // store n*m ints and n pointers to rows in a block
+	if (arr == NULL) return NULL; // if system can't allocate the memory
+
+	int* end_of_header = (int*) (arr + n); // Because arr's type is known, arithmetic like this actually offsets by
+	for (int i = 0; i < n; i++) {			// sizeof*n bytes rather than just n bytes.
+		arr[i] = end_of_header + i*m;
+	}
+	return arr;
 }
 
 int main() {
@@ -168,7 +258,36 @@ int main() {
 	assert(copy->right->right->left == NULL);
 	assert(copy->right->right->right == NULL);
 
+	std::cout << "==nine==" << '\n';
+	std::string* s1 = new std::string("hello"); // you have to use `new`, otherwise `delete` doesn't work.
+	std::string* s2 = new std::string("lol wut");
+	Nine<std::string> p1 (s1); // these two hit the first constructor
+	Nine<std::string> p2 (s2);
+	Nine<std::string> p3 (p1); // hits the second constructor
+	p3 = p2; // hits the assignment, removing one ref and adding another
+	p1 = p2; // hits assignement, and now ref_count for "hello" goes to zero, so we delete.
+	std::cout << *s1 << '\n'; // prints just a newline, because s1 is deleted
+	std::cout << *s2 << '\n'; // prints "lol wut", because s2 is still around
+	// And then the destructor gets called a bunch as the program ends.
+	// https://stackoverflow.com/questions/1962029/destructors-called-upon-program-termination
 
+	std::cout << "==ten==" << '\n';
+	void* q = ten_malloc(100, 16);
+	std::cout << std::hex << (long) q << '\n';
+	int m = ((long) q) % 16 == 0;
+	std::cout << m << '\n';
+	ten_free(q);
+
+	std::cout << "==eleven==" << '\n';
+	int** arr = eleven(4,5); // A double pointer behaves exactly like you'd expect an array to, but it. 
+	for (int i = 0; i < 4; i++) {	// necessitates a header of secondary pointers. To save memory, you might
+		for (int j = 0; j < 5; j++) {	// just keep n, m in some array class and calculate offset dynamically.
+			arr[i][j] = i*10 + j;
+			std::cout << std::dec << arr[i][j] << ',';
+		}
+		std::cout << '\n';
+	}
+	free(arr);
+
+	std::cout << "\n\n\n";
 }
-
-

@@ -26,10 +26,10 @@ Note that when importing all the code in the corresponding file gets run, becaus
 | 9. System Design and Scalability | 8 | ✓ |
 | 10. Sorting and Searching | 11 | ✓ |
 | 11. Testing | 6 | ✓ |
-| 12. C and C++ | 11 | 8 |
+| 12. C and C++ | 11 | ✓ |
 | 13. Java | 8 | 0 |
 | 14. Databases | 7 | ✓ |
 | 15. Threads and Locks | 7 | ✓ |
 | 16. Moderate | 26 | ✓ |
 | 17. Hard | 26 | 0 |
-| | Σ 186 | 141 |
+| | Σ 186 | 144 |
