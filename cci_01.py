@@ -34,7 +34,7 @@ def four(s):
 	# You could use a bit vector to just store parity of each character that occurs
 	# rather than use a counter. O(n) space -> O(1) space
 	c = Counter(s)
- 	x = 0
+	x = 0
 	for k,v in c.items():
 		if v % 2 != 0:
 			x += 1
