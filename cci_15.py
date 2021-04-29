@@ -79,7 +79,7 @@ class Philosopher(Thread):
 					if verbose: print("philosopher",str(self.i),"set down left chopstick")
 
 		if verbose: print("philosopher",str(self.i),"is eating")
-		eaten[self.i] = True
+		eaten[self.i] = True # cool thing about threads as opposed to processes is they can just easily access variables
 		if verbose: sleep(0.2); print("philosopher",str(self.i),"is setting down the left chopstick")
 		chopsticks[self.i].release()
 		if verbose: sleep(0.2); print("philosopher",str(self.i),"is setting down the the right chopstick")

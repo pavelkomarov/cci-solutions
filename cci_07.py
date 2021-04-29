@@ -203,19 +203,19 @@ class Puzzle:
 		random.shuffle(self.pieces)
 
 	def solve(self): # only using edges!
-		grid = [[None]*self.N for i in range(self.N)]
+		self.grid = [[None]*self.N for i in range(self.N)]
 
 		# find a corner and put it at upper left
 		for i,p in enumerate(self.pieces):
 			z = sum([c==0 for c in p.sides])
 			if z == 2:
-				grid[0][0] = p
+				self.grid[0][0] = p
 				self.pieces.pop(i)
 				break
 
 		# Rotate it until correct.
-		while grid[0][0].u != 0 or grid[0][0].l != 0:
-			grid[0][0].rotate()
+		while self.grid[0][0].u != 0 or self.grid[0][0].l != 0:
+			self.grid[0][0].rotate()
 
 		# finding correct next pieces, down the left side
 		for i in range(1,self.N):
@@ -223,8 +223,8 @@ class Puzzle:
 			while True:
 				y = k//4
 
-				if self.pieces[y].fits(grid[i-1][0], 'd'):
-					grid[i][0] = self.pieces[y]
+				if self.pieces[y].fits(self.grid[i-1][0], 'd'):
+					self.grid[i][0] = self.pieces[y]
 					self.pieces.pop(y)
 					break
 
@@ -238,21 +238,21 @@ class Puzzle:
 				while True:
 					y = k//4
 
-					if self.pieces[y].fits(grid[i][j-1], 'r'):
-						grid[i][j] = self.pieces[y]
+					if self.pieces[y].fits(self.grid[i][j-1], 'r'):
+						self.grid[i][j] = self.pieces[y]
 						self.pieces.pop(y)
 						break
 
 					self.pieces[y].rotate()
 					k += 1
 
-		return grid
+		return self.grid
 
 class Piece:
 	def __init__(self, iden, r=0, u=0, l=0, d=0):
 		self.iden = iden # so I can check correctness easily at end
 		self.sides = [r, u, l, d]
-		self.orientation = random.randint(0, 3)
+		self.orientation = random.randint(0, 3) # piece starts out at random rotation
 		# orientation 0:  u         orientation 1:  r
 		#               l   r                     u   d
 		#                 d                         l
@@ -268,34 +268,35 @@ class Piece:
 		return str(self.iden)
 
 	@property
-	def r(self): # currently right edge
+	def r(self): # current right edge
 		return self.sides[-self.orientation]
 	@r.setter
 	def r(self, v):
 		self.sides[-self.orientation] = v
 
 	@property
-	def u(self): # currently up edge
+	def u(self): # current up edge
 		return self.sides[1-self.orientation]
 	@u.setter
 	def u(self, v):
 		self.sides[1-self.orientation] = v
 
 	@property
-	def l(self): # currently left edge
+	def l(self): # current left edge
 		return self.sides[2-self.orientation]
 	@l.setter
 	def l(self, v):
 		self.sides[2-self.orientation] = v
 
 	@property
-	def d(self): # currently down edge
+	def d(self): # current down edge
 		return self.sides[3-self.orientation]
 	@d.setter
 	def d(self, v):
 		self.sides[3-self.orientation] = v
 
 	def fits(self, other, side): # self goes to the specified `side` of other
+		"""Pieces are considered to fit if the unique identifiers across their two edges match"""
 		if side == 'r': # self's left has to match other's right
 			return other.r == self.l and other.r != 0
 		elif side == 'u': # self's down has to match other's up
@@ -438,7 +439,7 @@ assert str(game) == """['w', 'w', 'b', 'b', 'b', 'b', 'b', 'b']
 ['w', 'b', 'b', 'b', 'b', 'b', 'b', 'b']"""
 assert game.score() == (29,35)
 
-# Ten
+# Nine
 class CircularList:
 	def __init__(self, data):
 		self.data = data
@@ -461,11 +462,11 @@ class CircularList:
 		else:
 			raise StopIteration
 
-ten = CircularList([0,1,2,3,4,5,6,7,8,9])
-ten.rotate(4)
-assert [a for a in ten] == [4,5,6,7,8,9,0,1,2,3]
+nine = CircularList([0,1,2,3,4,5,6,7,8,9])
+nine.rotate(4)
+assert [a for a in nine] == [4,5,6,7,8,9,0,1,2,3] # nine isn't a list, but it is iterable, so make list to compare
 
-# Eleven
+# Ten
 class Minesweeper:
 	def __init__(self, N, B):
 		self.N = N
@@ -592,4 +593,182 @@ assert str(game) == """[' ', ' ', ' ', ' ', ' ', ' ', ' ']
 # a Board separate from the Game, and a couple other tiny things. I think it can work well as a
 # single class, but for more complicated things, sure, make classes, put complexity in classes.
 
+# Eleven
+# I'd probably keep a tree of directories and files. Each Node can have many children or contain an
+# actual file. You could optionally make Directory and File classes which inherit from Node. Nodes
+# know who their parent is. Nodes support operations like deleting themselves, moving themselves,
+# or adding themselves at a particular location, given a ref to the tree. Nodes keep track of metadata
+# like how large the file or sum of things below is, when they were created, when files (leaf nodes)
+# were last updated, their name, etc.
+# Not gonna code it right now. Working with trees is too familiar, wouldn't add anything.
 
+# Twelve
+from cci_02 import Node
+
+class HashTable:
+	def __init__(self, n=10, p=0.5):
+		self.arr = [None]*n
+		self.n = n # the length of the backing table
+		self.p = p # the portion of things that can be in the table before a resize
+		self.c = 0 # how many things are in the table and its lists
+
+	def __getitem__(self, k):
+		i = hash(k) % self.n
+
+		if self.arr[i] is None: raise KeyError # nothing with that aliased key exists
+
+		node = self.arr[i]
+		while node is not None and node.val[0] != k:
+			node = node.next
+
+		if node is None: raise KeyError # nothing with that key exists
+
+		return node.val[1]
+
+	def __setitem__(self, k, v):
+		self.c += 1 # there is now one more item in the hashtable
+
+		if float(self.c) / self.n > self.p:
+			self._double()
+		i = hash(k) % self.n
+
+		if self.arr[i] is None: # No linked list head at this array location
+			self.arr[i] = Node((k,v))
+		else: # make a new node at the tail of the list
+			node = self.arr[i]
+			while node.next is not None:
+				node = node.next
+			node.next = Node((k,v))
+
+	def __delitem__(self, k):
+		i = hash(k) % self.n
+
+		if self.arr[i] is None: raise KeyError
+
+		node = self.arr[i]
+		if node.val[0] == k: # move the head of the list
+			self.arr[i] = node.next
+		else: # find the node just prior to the node with key k, so we can set its next to skip that one
+			while node.next is not None and node.next.val[0] != k:
+				node = node.next
+
+			if node.next is None: raise KeyError
+
+			node.next = node.next.next
+
+		self.c -= 1 # if we didn't keyerror, there is now one fewer items in the hashtable
+
+	def _double(self):
+		old_arr = self.arr
+		self.n *= 2
+		self.arr = [None]*self.n
+		self.c = 1 # I'm about to call setitem a bunch, so all the previously-added items are about to get recounted
+
+		for node in old_arr: # might be None or a node
+			while node is not None: # loop along linked list's length
+				self.__setitem__(*node.val) # puts (k,v) in to new, longer self.arr
+				node = node.next
+
+	def __repr__(self):
+		return '\n'.join(str(i) + ' ' + str(node) for i,node in enumerate(self.arr))
+
+	def __len__(self):
+		return self.c
+
+eleven = HashTable(n=10, p=0.5)
+# Here I'm exploiting the fact that hash(int) = int and my knowledge of how large the array should be to
+# put things exactly where I expect.
+eleven[0] = "zero"
+eleven[2] = "two"
+eleven[10] = "ten"
+eleven[20] = "twenty"
+eleven[7] = "seven"
+assert str(eleven) == """0 (0, 'zero')->(10, 'ten')->(20, 'twenty')->
+1 None
+2 (2, 'two')->
+3 None
+4 None
+5 None
+6 None
+7 (7, 'seven')->
+8 None
+9 None"""
+assert eleven[7] == 'seven' # the just-head linked list case
+assert eleven[0] == 'zero' # front
+assert eleven[10] == 'ten'
+assert eleven[20] == 'twenty'
+try:
+	eleven[5]
+	assert False
+except KeyError:
+	assert True
+assert len(eleven) == 5
+del eleven[10]
+assert len(eleven) == 4
+assert str(eleven) == """0 (0, 'zero')->(20, 'twenty')->
+1 None
+2 (2, 'two')->
+3 None
+4 None
+5 None
+6 None
+7 (7, 'seven')->
+8 None
+9 None"""
+del eleven[0]
+del eleven[7]
+assert str(eleven) == """0 (20, 'twenty')->
+1 None
+2 (2, 'two')->
+3 None
+4 None
+5 None
+6 None
+7 None
+8 None
+9 None"""
+try:
+	del eleven[7] # the table is None here
+	assert False
+except KeyError:
+	assert True
+try:
+	del eleven[0] # the table has the 20 node here, but key 0 doesn't exist
+	assert False
+except KeyError:
+	assert True
+eleven[0] = "zero"
+eleven[6] = "six"
+eleven[1010] = "one thousand ten"
+assert str(eleven) == """0 (20, 'twenty')->(0, 'zero')->(1010, 'one thousand ten')->
+1 None
+2 (2, 'two')->
+3 None
+4 None
+5 None
+6 (6, 'six')->
+7 None
+8 None
+9 None"""
+eleven[18] = "eighteen" # check doubling and re-populating works properly
+assert str(eleven) == """0 (20, 'twenty')->(0, 'zero')->
+1 None
+2 (2, 'two')->
+3 None
+4 None
+5 None
+6 (6, 'six')->
+7 None
+8 None
+9 None
+10 (1010, 'one thousand ten')->
+11 None
+12 None
+13 None
+14 None
+15 None
+16 None
+17 None
+18 (18, 'eighteen')->
+19 None"""
+assert len(eleven) == 6

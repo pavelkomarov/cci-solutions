@@ -1,5 +1,5 @@
 
-class Node:
+class Node: # This ended up getting way more use across way more chapters than I expected.
 	def __init__(self, val, next=None, prev=None):
 		self.val = val
 		self.next = next

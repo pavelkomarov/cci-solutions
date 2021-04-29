@@ -3,9 +3,10 @@ My solutions to exercises in Cracking the Coding Interview, in Python.
 
 I've named files like `cci_##.py`, where `##` is a chapter number. All answers for a chapter are written in a single file, with little `assert`s to test each one right after its implementation. Simply run the file to check all these tests.
 
-Some helpful utilities I've had to build and use along the way:
+Some helpful or fun utilities I've had to build and use along the way:
 - `from cci_02 import Node` for linked lists (singly-linked or doubly)
 - `from cci_04 import TreeNode` for binary trees
+- `cci_07.py` has implementations of a `HashTable` with external chaining, an example of how to make a class iterable (see `CircularList`), Minesweeper, and Othello
 - `from cci_10 import BitVector` for a bit map
 - This [`pytest` example](https://github.com/pavelkomarov/projection-pursuit/blob/master/skpp/tests/test_skpp.py) demonstrates a complementary approach to chapter 11, which is focused much more on the high-level.
 - `cci_14.py` for examples of how to use `sqlite3`
@@ -21,7 +22,7 @@ Note that when importing all the code in the corresponding file gets run, becaus
 | 4. Trees and Graphs | 12 | ✓ |
 | 5. Bit Manipulation | 8 | ✓ |
 | 6. Math and Logic Puzzles | 10 | ✓ |
-| 7. Object-Oriented Design | 12 | 10 |
+| 7. Object-Oriented Design | 12 | ✓ |
 | 8. Recursion and Dynamic Programming | 14 | ✓ |
 | 9. System Design and Scalability | 8 | ✓ |
 | 10. Sorting and Searching | 11 | ✓ |
@@ -32,4 +33,4 @@ Note that when importing all the code in the corresponding file gets run, becaus
 | 15. Threads and Locks | 7 | ✓ |
 | 16. Moderate | 26 | ✓ |
 | 17. Hard | 26 | 0 |
-| | Σ 189 | 153 |
+| | Σ 189 | 155 |
