@@ -439,5 +439,157 @@ assert str(game) == """['w', 'w', 'b', 'b', 'b', 'b', 'b', 'b']
 assert game.score() == (29,35)
 
 # Ten
+class CircularList:
+	def __init__(self, data):
+		self.data = data
+		self.s = 0
+		self.n = len(self.data)
+
+	def rotate(self, x):
+		self.s += x
+		self.s %= self.n
+
+	def __iter__(self): # making something iterable in python entails implementing __iter__ and __next__
+		self.i = 0
+		return self
+
+	def __next__(self):
+		if self.i < len(self.data):
+			r = self.data[(self.s + self.i) % self.n]
+			self.i += 1
+			return r
+		else:
+			raise StopIteration
+
+ten = CircularList([0,1,2,3,4,5,6,7,8,9])
+ten.rotate(4)
+assert [a for a in ten] == [4,5,6,7,8,9,0,1,2,3]
+
+# Eleven
+class Minesweeper:
+	def __init__(self, N, B):
+		self.N = N
+		self.board = [['_']*N for i in range(N)]
+
+		self.la_bomba = [1]*B + [0]*(N*N - B)
+		random.shuffle(self.la_bomba) # shuffle ensures minimal random calls
+		self.la_bomba = set([divmod(x, N) for x,b in enumerate(self.la_bomba) if b == 1])
+
+		self.n_bombs_around = [[0]*N for i in range(N)] # precompute the numbers for each square
+		for i,j in self.la_bomba:
+			for v in [-1, 0, 1]: # vertical offset
+				for h in [-1, 0, 1]: # horizontal offset
+					self.n_bombs_around[i+v][j+h] += 1
+
+		self.over = False
+
+	def __repr__(self):
+		return '\n'.join(str(row) for row in self.board)
+
+	def flag(self, i, j):
+		self.board[i][j] = 'f'
+
+	def click(self, i, j):
+		if self.over: return
+
+		bueno = self._recurse(i, j)
+		if not bueno: # show all the bombs
+			for r,c in self.la_bomba:
+				self.board[r][c] = '*'
+			self.over = True
+			return "lose" # could set some kind of game state instead
+
+		else: # check whether there's a not-bomb locaton that still hasn't been explored
+			for r in range(self.N):
+				for c in range(self.N):
+					if self.board[r][c] == '_' and (r,c) not in self.la_bomba:
+						return # if one is found
+			self.over = True
+			return "win" # if none found
+
+	def _recurse(self, i, j):
+		"""True if you live, False if you die"""
+		if (i,j) in self.la_bomba: return False
+		if self.board[i][j] != '_': return True # already explored (or flagged)
+					
+		if self.n_bombs_around[i][j] > 0:
+			self.board[i][j] = str(self.n_bombs_around[i][j])
+		else:
+			self.board[i][j] = ' '
+			for h in [-1, 0, 1]: # horizontal offset
+				for v in [-1, 0, 1]: # vertical offset
+					y = i+v
+					x = j+h
+					if 0 <= y < self.N and 0 <= x < self.N:
+						self._recurse(y, x)
+		return True
+
+random.seed(11)
+game = Minesweeper(7, 3)
+assert str(game) == """['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']"""
+game.click(0, 0)
+assert str(game) == """[' ', ' ', ' ', ' ', ' ', ' ', ' ']
+[' ', ' ', ' ', ' ', '1', '1', '1']
+['1', '1', '1', ' ', '1', '_', '_']
+['_', '_', '1', '1', '2', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']"""
+game.click(3, 0)
+assert str(game) == """[' ', ' ', ' ', ' ', ' ', ' ', ' ']
+[' ', ' ', ' ', ' ', '1', '1', '1']
+['1', '1', '1', ' ', '1', '_', '_']
+['1', '_', '1', '1', '2', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']"""
+game.flag(3,1)
+game.flag(2,5)
+assert str(game) == """[' ', ' ', ' ', ' ', ' ', ' ', ' ']
+[' ', ' ', ' ', ' ', '1', '1', '1']
+['1', '1', '1', ' ', '1', 'f', '_']
+['1', 'f', '1', '1', '2', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']
+['_', '_', '_', '_', '_', '_', '_']"""
+game.click(6,6)
+assert str(game) == """[' ', ' ', ' ', ' ', ' ', ' ', ' ']
+[' ', ' ', ' ', ' ', '1', '1', '1']
+['1', '1', '1', ' ', '1', 'f', '_']
+['1', 'f', '1', '1', '2', '2', '1']
+['1', '1', '1', '1', '_', '1', ' ']
+[' ', ' ', ' ', '1', '1', '1', ' ']
+[' ', ' ', ' ', ' ', ' ', ' ', ' ']"""
+from copy import deepcopy
+losing_game = deepcopy(game)
+assert losing_game.click(4,4) == 'lose'
+assert losing_game.over
+assert str(losing_game) == """[' ', ' ', ' ', ' ', ' ', ' ', ' ']
+[' ', ' ', ' ', ' ', '1', '1', '1']
+['1', '1', '1', ' ', '1', '*', '_']
+['1', '*', '1', '1', '2', '2', '1']
+['1', '1', '1', '1', '*', '1', ' ']
+[' ', ' ', ' ', '1', '1', '1', ' ']
+[' ', ' ', ' ', ' ', ' ', ' ', ' ']"""
+assert not game.over
+assert game.click(2,6) == 'win'
+assert game.over
+assert str(game) == """[' ', ' ', ' ', ' ', ' ', ' ', ' ']
+[' ', ' ', ' ', ' ', '1', '1', '1']
+['1', '1', '1', ' ', '1', 'f', '1']
+['1', 'f', '1', '1', '2', '2', '1']
+['1', '1', '1', '1', '_', '1', ' ']
+[' ', ' ', ' ', '1', '1', '1', ' ']
+[' ', ' ', ' ', ' ', ' ', ' ', ' ']"""
+
+# Gayle uses all kinds of classes for this, a Cell which knows its value and whether it is exposed, 
+# a Board separate from the Game, and a couple other tiny things. I think it can work well as a
+# single class, but for more complicated things, sure, make classes, put complexity in classes.
 
 

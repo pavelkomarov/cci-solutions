@@ -21,7 +21,7 @@ Note that when importing all the code in the corresponding file gets run, becaus
 | 4. Trees and Graphs | 12 | ✓ |
 | 5. Bit Manipulation | 8 | ✓ |
 | 6. Math and Logic Puzzles | 10 | ✓ |
-| 7. Object-Oriented Design | 12 | 8 |
+| 7. Object-Oriented Design | 12 | 10 |
 | 8. Recursion and Dynamic Programming | 14 | ✓ |
 | 9. System Design and Scalability | 8 | ✓ |
 | 10. Sorting and Searching | 11 | ✓ |
@@ -32,4 +32,4 @@ Note that when importing all the code in the corresponding file gets run, becaus
 | 15. Threads and Locks | 7 | ✓ |
 | 16. Moderate | 26 | ✓ |
 | 17. Hard | 26 | 0 |
-| | Σ 189 | 151 |
+| | Σ 189 | 153 |
