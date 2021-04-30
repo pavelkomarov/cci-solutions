@@ -75,7 +75,7 @@ class Two { // can't be public, or has to be named same thing as file. can't be 
  * params -> xml function.
  */
 
-/*numbers.forEach( (n) -> { System.out.println(n); } );* Seven **/
+/** Seven **/
 class Country {
 	public String continent;
 	public int population;
