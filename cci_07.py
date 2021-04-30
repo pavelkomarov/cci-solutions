@@ -613,15 +613,9 @@ class HashTable:
 		self.c = 0 # how many things are in the table and its lists
 
 	def __getitem__(self, k):
-		i = hash(k) % self.n
+		node, parent, i = self._get_node_and_parent(k)
 
-		if self.arr[i] is None: raise KeyError # nothing with that aliased key exists
-
-		node = self.arr[i]
-		while node is not None and node.val[0] != k:
-			node = node.next
-
-		if node is None: raise KeyError # nothing with that key exists
+		if node is None: raise KeyError # if there is no such key in the data structure
 
 		return node.val[1]
 
@@ -630,31 +624,25 @@ class HashTable:
 
 		if float(self.c) / self.n > self.p:
 			self._double()
-		i = hash(k) % self.n
 
-		if self.arr[i] is None: # No linked list head at this array location
+		node, parent, i = self._get_node_and_parent(k)
+		
+		if node is None and parent is None: # No linked list head at this array location
 			self.arr[i] = Node((k,v))
-		else: # make a new node at the tail of the list
-			node = self.arr[i]
-			while node.next is not None:
-				node = node.next
-			node.next = Node((k,v))
+		elif node is not None: # an entry with this very key already exists, so just update
+			node.val = (k,v)
+		else: # node is None, but parent isn't, so chain new node to end of list
+			parent.next = Node((k,v))
 
 	def __delitem__(self, k):
-		i = hash(k) % self.n
+		node, parent, i = self._get_node_and_parent(k)
 
-		if self.arr[i] is None: raise KeyError
+		if node is None: raise KeyError
 
-		node = self.arr[i]
-		if node.val[0] == k: # move the head of the list
+		if parent is None: # move the head of the list forward
 			self.arr[i] = node.next
-		else: # find the node just prior to the node with key k, so we can set its next to skip that one
-			while node.next is not None and node.next.val[0] != k:
-				node = node.next
-
-			if node.next is None: raise KeyError
-
-			node.next = node.next.next
+		else: # skip node
+			parent.next = node.next
 
 		self.c -= 1 # if we didn't keyerror, there is now one fewer items in the hashtable
 
@@ -668,6 +656,22 @@ class HashTable:
 			while node is not None: # loop along linked list's length
 				self.__setitem__(*node.val) # puts (k,v) in to new, longer self.arr
 				node = node.next
+
+	def _get_node_and_parent(self, k):
+		"""for getting and setting and deleting, I may need three pieces of information: the table index
+		where a node with the key should go, the node already associated to a key if it exists, and that
+		node's parent"""
+		i = hash(k) % self.n
+
+		if self.arr[i] is None: return None, None, i
+
+		parent = None
+		node = self.arr[i]
+		while node is not None and node.val[0] != k:
+			parent = node
+			node = node.next # Can run off the end, in which case parent is the lat node in the linked list
+
+		return node, parent, i
 
 	def __repr__(self):
 		return '\n'.join(str(i) + ' ' + str(node) for i,node in enumerate(self.arr))

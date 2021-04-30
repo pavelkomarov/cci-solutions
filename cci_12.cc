@@ -1,7 +1,6 @@
 // compile with g++ cci_12.cc
 // run with ./a.out, the default output name
 #include <iostream> // so cout works
-//#include <cassert> // so I can write little tests
 //using namespace std // allows you to not have to keep specifying std::thing
 
 #include <fstream> // for file io and printf
