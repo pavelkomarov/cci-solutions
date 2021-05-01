@@ -32,5 +32,5 @@ Note that when importing all the code in the corresponding file gets run, becaus
 | 14. Databases | 7 | ✓ |
 | 15. Threads and Locks | 7 | ✓ |
 | 16. Moderate | 26 | ✓ |
-| 17. Hard | 26 | 0 |
-| | Σ 189 | 163 |
+| 17. Hard | 26 | 4 |
+| | Σ 189 | 165 |
