@@ -163,6 +163,286 @@ for n in [110,13]:
 		arr = list(range(missing)) + list(range(missing+1, n+1))
 		assert four(arr) == missing
 
+def five(arr):
+	"""My idea here was to keep a running sum as a list, incrementing every time I see a number,
+	decrementing every time I see a letter (or vice versa, doesn't matter), then look at the result.
+	I have to be careful to start from list=[0], and then append list[-1] +-1. I end up with something
+	like: [0, -1, -2, -1, -2, -1, 0, -1, 0, -1, -2, -1, -2, -1, 0, -1, -2, -3, -4, -5, -6]
+
+	This immediately suggests an algorithm to me: If I start at a certain running sum and then get back to
+	the same sum, then the sum of all the numbers in between is zero, which means an even number of letters
+	and numbers. I need to keep the earliest occurrence of each new running sum so I can base off it if
+	need be, and if I come across a sum I've seen before, then I know I can get the length of that distance
+	by subtracting my current index from the index where I first saw that sum (my "base").
+	"""
+	d = {} # store bases
+	r = 0 # running sum
+	d[r] = -1 # my running sum is zero before I start running along indices. First index is 0, so just before is -1.
+	m = 0 # length of largest evenly alphanumeric string I've seen so far
+	#ll = [r]
+
+	for i,a in enumerate(arr):
+		if 48 <= ord(a) <= 57: # numeric
+			r += 1
+		elif 97 <= ord(a) <= 122: # alphabetical
+			r -= 1
+		#ll.append(r)
+
+		if r in d:
+			m = max(m, i - d[r])
+		else:
+			d[r] = i
+
+	#print(ll)
+	return m
+
+assert five("abc345") == 6
+assert five("a3b4c5d") == 6
+assert five("i0ryjlfjq1cdwbbwzvij") == 2
+assert five("oxxalkyr4fkh11szzlfo") == 6
+assert five("7tl91m1xbjfye951mnqb") == 8
+assert five("c8bo5qdzevfj2u700u3v") == 10
+assert five("oy6c12a5al8w57gyjlal") == 14
+
+def six(n, brute_force=False):
+	twos = 0
+
+	if brute_force: # for testing against
+		for i in range(n+1):
+			for c in str(i):
+				if c == '2':
+					twos += 1
+	else:
+		"""
+		There's a recursive pattern here:
+
+		For the 1s: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 -> 0, 0, 1, 0, 0, 0, 0, 0, 0, 0 -> sums to 1
+		For the 10s: 0s, 10s, 20s, 30s, 40s, 50s, 60s, 70s, 80s, 90s
+			-> 1, 1, 11, 1, 1, 1, 1, 1, 1, 1 -> sums to 20
+		For the 100s: 0s, 100s, 200s, 300s, 400s, 500s, 600s, 700s, 800s, 900s
+			-> 20, 20, 120, 20, 20, 20, 20, 20, 20, 20 -> sums to 300
+		For the 1000s: 0ks, 1ks, 2ks, 3ks, 4ks, 5ks, 6ks, 7ks, 8ks, 9ks
+			-> 300, 300, 1300, 300, 300, 300, 300, 300, 300, 300 -> sums to 4000
+
+		In general each 10^k in the number contributes k*10^(k-1) 2s, unless its the third 10^k we're
+		counting, in which case you add in an extra 10^k 2s.
+
+		So in 3030 we get 300 2s from each of the 1000s, an extra 1000 2s from the 2000s, one 2 from each
+		of the three 10s, and an extra 10 2s for the 20s, bringing the total to 1913.
+
+		The trouble is when we have 2s in number itself. For every 2 found, we know that all the numbers
+		with smaller or equal value in digits of lesser significance than this digit can contribute an extra
+		2, which only allows us to consider up to n.
+
+		So say we have 2222. We get 300 2s from the first two thousands, which covers 0..999, 1000..1999.
+		But now for 2000..2222 We have to account for the extra 2 in the thousands place for all subsequent
+		numbers. The number of these twos is just the cardinality of [0, 222] = 223 = n % 1000 + 1. You
+		can likewise do this ones-place upward rather than thousands-place downward, because you'll find
+		all the same sets to account for.
+		"""
+		h = n
+		k = 0
+		while h > 0:
+			h, d = divmod(h, 10)
+
+			twos += d*k*10**(k-1) # d is in the (10^k)s place -> each contribute k*10^(k-1) 2s
+
+			if d > 2: # if we're beyond the 2s, then just add in all extra 10^k 2s
+				twos += 10**k
+			elif d == 2: # if we're *in* the 2s, then we know 2(k 0s)..2(rest of n) each contribute
+				twos += n % (10**k) + 1	# an extra 2. n % 10^k + 1 is the number of things in this set.
+
+			k += 1
+
+	return int(twos) # I think ** causes int -> float under some strange condition
+
+assert six(25, brute_force=True) == six(25, brute_force=False) == 9
+assert six(3030, brute_force=True) == six(3030, brute_force=False) == 1913
+assert six(2222, brute_force=True) == six(2222, brute_force=False) == 892
+
+def seven(names, synonyms, union_find=False):
+	if union_find:
+		# Essentially each name is a graph node, and each synonym relationship adds an edge. I need
+		# the connected connected components in this graph to get canonical names. I'm using a Union Find.
+		connected = []
+		for name1,name2 in synonyms:
+
+			e1 = None # the sets the two names belong to
+			e2 = None
+			for i,x in enumerate(connected): # This is my favoite way to do a union-find in python
+				if name1 in x: e1 = i
+				if name2 in x: e2 = i
+
+			if e1 == e2 and e1 is not None: continue
+
+			elif e1 is None and e2 is None: # then create new set in the union-find
+				connected.append(set([name1, name2]))
+
+			elif e1 is None or e2 is None: # add one to the other
+				if e1 is None: connected[e2].add(name1)
+				else: connected[e1].add(name2)
+
+			else: # they both exist, but in different sets, so merge
+				connected[e1] |= connected[e2]
+				del connected[e2]
+
+		# I'd like to map from all members of each connected component to some canonical name
+		d = {}
+		for component in connected:
+			label = component.pop()
+			for name in component:
+				d[name] = label
+
+	else:
+		# There is a more optimal way to find the connected components in a graph. With a union
+		# find you have to keep iterating the components and merging sets, and it ends up O(n log n)
+		# in the worst case. If instead you build a graph out of all your nodes and edges and then DFS
+		# it, keeping a visited set, you can get connected components in O(V + E) time.
+		G = {}
+		for name1,name2 in synonyms:
+			if name1 in G:
+				G[name1].add(name2)
+			else:
+				G[name1] = set([name2])
+
+			if name2 in G:
+				G[name2].add(name1)
+			else:
+				G[name2] = set([name1])
+
+		d = {} # functions as the visited set
+		def dfs(node, label):
+			d[node] = label
+			for neighbor in G[name]:
+				if neighbor not in d:
+					dfs(neighbor, label)
+
+		for name in G:
+			if name not in d:
+				dfs(name, name)
+
+	# Now use the known labels to total up frequencies
+	totals = defaultdict(int)
+	for name,freq in names:
+		if name in d:
+			name = d[name]
+		totals[name] += freq
+
+	return list(totals.items())
+
+names = [('John', 15), ('Jon', 12), ('Chris', 13), ('Kris', 4), ('Christopher', 19)]
+synonyms = [('John', 'Jon'), ('John', 'Johnny'), ('Chris', 'Kris'), ('Chris', 'Christopher')]
+for uf in [True, False]:
+	for name,total in seven(names, synonyms, union_find=uf):
+		if name in ['John', 'Jon', 'Johnny']:
+			assert total == 27
+		elif name in ['Chris', 'Kris', 'Christopher']:
+			assert total == 36
+		else:
+			assert False
+
+def eight(heightweights, recurse=False):
+	"""Because we know height and weight must both be sorted in the final subsequence, we can partially
+	solve the problem by sorting the heightweights list by height or weight at the beginning. Then we
+	know the subsequence that's the right answer is ordered in the sorted array, and we only have to
+	search *after* (or before) each i to find potential js.
+	"""
+	heightweights = sorted(heightweights)
+
+	if recurse:
+		"""This is very similar to 8.13, the stacking boxes problem. Basically we have to put things on top
+		of each other, but this is only allowed via certain conditions.
+
+		Say I have a recursive function which assumes person i is at the top. Person j right below them has
+		to be taller and heavier, and I can iterate through the people looking for who is taller and heavier.
+		Assume each person j is the top of their own tower, and see how tall that tower can be. Select the
+		sub-tower with the most people in it, and then stack person i atop, and return.
+		
+		Memoize so the recursion isn't stupid.
+		"""
+		memo = {}
+		def recurse(i):
+			if i in memo: return memo[i]
+			longest = 0
+			t = []
+			h1, w1 = heightweights[i]
+
+			for j,(h2,w2) in enumerate(heightweights[i+1:]):
+				if h2 > h1 and w2 > w1:
+					t_j = recurse(i+1+j)
+					if len(t_j) > longest:
+						t = [x for x in t_j]
+						longest = len(t_j)
+
+			t.insert(0, heightweights[i])
+			memo[i] = t
+			return t
+
+		longest = []
+		for i in range(len(heightweights)): # I'm pretty sure this ends up O(n^2)
+			t_i = recurse(i)
+			if len(t_i) > len(longest):
+				longest = t_i
+
+		return longest
+
+	else:
+		"""Alternative: If you sort by height or weight, then the problem reduces to finding the longest
+		increasing subsequence in the other variable. This is a classic problem with O(n^2) and O(n log n)
+		solutions.
+
+		Briefly: In O(n^2) you iterate through the array finding out how long the longest increasing
+		subsequence that ends *at the ith location* is. Figuring this out invovles iterating backwards to
+		find the best jth location to build off of.
+
+		In the O(n log n) solution you build up a fanciful sequence by placing numbers *where they would
+		go* in a potential sequence that could be created with them. This is best illustrated with an
+		example: Input: [0, 8, 4, 12, 2]. sequence is [0], then [0, 8] because 8 can only build off the 0,
+		[0, 4] because 4 can still build off 0 but is lower than 8 and therefore more likely to allow
+		subsequent numbers to be greater than it, [0, 4, 12], because 12 can build off 4, [0, 2, 12] because
+		2 can build off 0 and is even lower than 4. The real kicker here is that we can figure out where to
+		place numbers in this sequence we're building in O(log n) time.
+
+		In order to recover the actual sequence, we have to keep track of ancestors.
+		"""
+		nums = [x[1] for x in heightweights] # get the weights
+		ancestors = {nums[0]:(None,0)} # so I can recover the subsequence, map num -> ancestor num (next key), index
+
+		seq = [nums[0]] # the thing I'll be binary searching through
+		for i in range(1, len(nums)):
+			lo = 0
+			hi = len(seq) - 1
+			
+			while lo <= hi:
+				mid = (lo + hi) // 2
+				
+				if nums[i] > seq[mid]:
+					lo = mid + 1
+				else: # favor moving hi if ==, so lo ends up at the == location if one exists
+					hi = mid - 1
+				   
+			# lo ends up at number just above (where to insert nums[i]), hi ends up at number just below (the ancestor)
+			if lo == len(seq):
+				seq.append(nums[i])
+			else:
+				seq[lo] = nums[i]
+
+			ancestors[nums[i]] = (seq[hi],i) if hi >= 0 else (None,i)
+
+		# recover the LCI (raw indexes), and use it to index heightweights to get the subsequence
+		lci = []
+		anc = seq[-1]
+		while anc:
+			anc, i = ancestors[anc]
+			lci.insert(0, heightweights[i])
+
+		return lci
+
+heightweights = [(65,100), (70,150), (56,90), (75,190), (40, 100), (60,95), (68,110)]
+assert eight(heightweights, recurse=True) == eight(heightweights, recurse=False) == \
+	[(56, 90), (60, 95), (65, 100), (68, 110), (70, 150), (75, 190)]
+
+
 
 
 
