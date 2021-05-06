@@ -442,12 +442,282 @@ heightweights = [(65,100), (70,150), (56,90), (75,190), (40, 100), (60,95), (68,
 assert eight(heightweights, recurse=True) == eight(heightweights, recurse=False) == \
 	[(56, 90), (60, 95), (65, 100), (68, 110), (70, 150), (75, 190)]
 
+def nine(k, brute_force=False):
+	if brute_force:
+		"""The insight here is that the kth number will be at most 3^a * 5^b * 7^c, where the sum of
+		a, b, c can't exceed k. Iterate a whole bunch of possibilities O(k^3), then sort O(k^3 log(k^3)),
+		for a final run time of O(k^3 log(k)) (because the exponent inside the log is just a constant *
+		the log). Pretty bad, but useful for checking correctness against other methods.
+		"""
+		l = []
+		for a in range(k+1):
+			for b in range(k+1-a):
+				for c in range(k+1-a-b):
+					l.append(3**a * 5**b * 7**c)
+					
+		return sorted(l)[k-1]
+	else:
+		"""Idea, arrived at by pondering and looking at the hints: keep our master list = [] to start,
+		and keep three other lists 3s, 5s, 7s all also empty to start. We add 1 to the master list, and
+		add 3*1 to the 3s, 5*1 to the 5s, 7*1 to the 7s. Then the next-best thing to put in the list is
+		the min of the front of the 3s, 5s, and 7s queues, which will be 3. Push 3*3, 3*5, 3*7 on the
+		queues, and repeat. Note that because we only need to return the kth factor, the master list can
+		be notional.
+
+		Note that we'll run in to duplicate factors here, because 3*5 is the same as 5*3, for example.
+		One way around this is just to store them and iterate past them if a duplicate is encountered,
+		which is how I solved it at first, but there is a space-saving trick:
+
+		If the min value, x, comes from the 3s, then push on to all three queues. If it comes from the 5s,
+		then 3*x will have already been seen as 5*(x*3/5), because we've visited x*3/5 previously.
+		Likewise, if x comes from the 7s, then 3*x and 5*x will have already been seen as 7*(x*3/7) and
+		7*(x*5/7). Thus we can skip pushing on to some queues in the 5s and 7s cases.
+		"""
+		threes = [3]
+		fives = [5]
+		sevens = [7]
+		x = 1
+		k -= 1
+
+		while k > 0:
+			if threes[0] <= fives[0] and threes[0] <= sevens[0]: # 3s has smallest
+				x = threes.pop(0)
+				threes.append(3*x)
+				fives.append(5*x)
+			elif fives[0] <= threes[0] and fives[0] <= sevens[0]: # 5s has smallest
+				x = fives.pop(0)
+				fives.append(5*x) # skip pushing on to 3s
+			else: # 7s has smallest
+				x = sevens.pop(0) # skip pushing on to 3s and 5s
+			sevens.append(7*x) # always push on to 7s
+
+			k -= 1
+				
+		return x
+
+assert nine(20, brute_force=True) == nine(20, brute_force=False) == 175
+assert nine(1, brute_force=True) == nine(1, brute_force=False) == 1
+
+def ten(arr):
+	"""If I didn't have to worry about O(1) space, then just use a Counter. If I had the mode, then
+	checking whether it occurs >half the time is O(N) time, O(1) space, but all the solutions I can
+	find for getting the mode use some kind of memory, which makes me think majority element is the
+	computationally easier problem, so let's exploit the majorityness.
+
+	What does majorityness get us? The key insight is that if x is the majority element of the whole
+	array, then removing equal numbers of x and non-x from the array leaves us with x as still the
+	majority in what's left. And removing elements that aren't x just makes x all the easier to find.
+
+	Let's assume the first element, a, is the majority and start checking whether it is. As soon as we
+	get equal counts of a and non-a, stop short, and toss all those elements. Begin checking whether the
+	next element after this is the majority element of the remaining array. If we never reach the toss
+	condition, then a is x, the majority we've been looking for.
+
+	If a == x, but we still toss due to not finding enough x early on, then we've tossed equal numbers of
+	x and non-x, and we'll still find x to be a majority later. If a != x, then it's possible we've
+	paried a with all xs, and we've again spent an equal number of xs to eliminate as, but it's also
+	possible we've paired with some non-xs, and more of what we remove is extraneous, leaving an even
+	higher concentration of xs to be found later. In this way, we'll validate some a as our x in O(n).
+
+	Caveat: It is possible to have a degenerate case where we remove a bunch of non-x elements early,
+	thereby *raising the "concentration"* of x later, making x the majority element of a later subarray,
+	but, when we "dilute" with those previously-tossed elements, not of the whole array. So do one last
+	sweep to check the majority candidate works. It's not possible to have more than one candidate, so
+	if this one doesnt' work, there is no majority element for the array.
+	"""
+	c = 0 # count of |matches| - |non matches|
+	for i,a in enumerate(arr): # O(n)
+		if c == 0:
+			maj = a
+			c = 1
+		elif a == maj:
+			c += 1
+		else:
+			c -= 1
+
+	match = sum(maj == a for a in arr) # O(n)
+
+	return maj if match > len(arr)//2 else -1
+
+assert ten([1, 2, 5, 9, 5, 9, 5, 5, 5]) == 5
+assert ten([1, 2, 5, 9, 5, 9, 5, 5]) == -1
+assert ten([1, 2, 5, 9, 5, 9, 5, 5, 5, 7]) == -1
+assert ten([3, 1, 7, 1, 1, 7, 7, 3, 7, 7, 7]) == 7
+
+def eleven(document, word_pairs):
+	"""If I only have one word-pair, then the way to go is to iterate the document with two pointers, one
+	to the location of the last occurrence of word1, and one with the last occurrence of word2. As these
+	get updated, check whether abs(p1 - p2) is < the previous best, and in the end you return that best
+	value.
+
+	If I have many words, then I can preprocess the document to get a map from word -> [locations] where
+	that word occurs. Then if I want to compare word1 to word2, I get their two locations lists and
+	essentially do a mergesort-merge-like traversal of them to figure out what the min diff is. This is
+	completely analogous to the single-word-pair case, except I'm not generating these lists as I iterate
+	the document itself.
+	"""
+	d = defaultdict(list)
+	for i,word in enumerate(document.split()):
+		for punct in ".,":
+			word = word.replace(punct, '')
+		d[word.lower()].append(i)
+
+	dists = []
+	for word1,word2 in word_pairs:
+		l1 = d[word1.lower()]
+		l2 = d[word2.lower()]
+
+		a = 0
+		b = 0
+		m = float('inf')
+		while a < len(l1) and b < len(l2):
+			if l1[a] < l2[b]:
+				m = min(m, l2[b] - l1[a])
+				a += 1
+			else:
+				m = min(m, l1[a] - l2[b])
+				b += 1
+		# when one or the other pointer runs off the end of its list, then every subsequent possible match
+		# from iterating the opposite pointer will be farther than something we've already checked, so we're
+		# safe to end.
+		dists.append(m)
+
+	return dists
+
+lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+assert eleven(lorem_ipsum, [('Lorem', 'ipsum'), ('consectetur', 'in'), ('dolor', 'ut'), ('dolore', 'in'),
+	('ut', 'in')]) == [1, 35, 9, 5, 10]
+
+from cci_02 import Node # I'm using my Node class instead of defining BiNode
+
+def twelve(root):
+	"""Idea: in-order traveral of the tree, saving nodes in a list as we go, then iterate the list, setting
+	left and right pointers as we go. I got this to work, but obviously it's O(n) space, and I'd like to do
+	it in O(1) space.
+
+	A key thing to recognize is that because my in-order traversal involved appending to a list, and I was
+	later just setting left pointers = the leftward thing in that list, I didn't really need the whole list
+	to set left pointers; I could just keep the last thing in that list, set left pointers as I visit nodes,
+	and then set the current node to be the new last node.
+
+	Unfortunately I don't see a way to extend this to right pointers, but it's not really a problem, because
+	at the end of my in-order traversal I have a singly-linked list (via the left pointers) and the last
+	thing in the list (sort of the head if left is forward), so I can access all the nodes by iterating along
+	this list, setting their right pointers properly as I go.
+	"""
+	last = [None] # gotta box it up in a list to make it accessible in the inner function
+	def inorder(node): # O(log n) space on the stack
+		if node:
+			inorder(node.prev)
+			node.prev = last[0]
+			last[0] = node
+			inorder(node.next)
+
+	inorder(root)
+	
+	last = last[0] # unbox
+	last.next = None # first right pointer goes to None
+	while last.prev:
+		last.prev.next = last
+		last = last.prev
+
+	return last
+	# Gayle's solution to this is purely recursive and works on a principle of returning the start and
+	# end of a doubly-linked list for left and right portions. The run time and space complexity aren't
+	# really better. I prefer my solution simply because it looks like every other in-order solution I've
+	# had to write.
+
+#		  5
+#	  11     20
+#	8      18   2
+#	  3
+# To define a tree with my Node class, prev is sort of like left, and next is sort of like right
+tree = Node(8, prev=Node(5, prev=Node(2, next=Node(3))), next=Node(18, prev=Node(11), next=Node(20)))
+dll = twelve(tree)
+assert str(dll) == "2<->3<->5<->8<->11<->18<->20->"
+assert dll.prev is None
+
+def thirteen(nospace, dictionary):
+	"""I had to code this one from the solutions before I could begin to undesrtand it. We're splitting
+	problem(string) into prefix + " " + subproblem(rest of string), basically deciding where to put that
+	space.
+
+	We can evaluate the cost of putting a space at any given location = len(prefix) if the prefix isn't
+	in the dictionary or 0 if the prefix is a valid word + cost of the subproblem. We're looking for
+	the optimal cost.
+
+	We also need the string parsing associated to the optimal cost, so our recursive function needs to
+	return both the cost and the parsing.
+
+	The problem/subproblem is defined based on where the "rest of string" after the space begins. This
+	can be uniquely identified by just a begin index, and for the total problem, we'll just begin at 0.
+
+	The base case is when we run off the end of the string, in which case the cost is 0 and the parsing
+	is the empty string.
+
+	The recurrence for cost becomes T[i] = min over j in [i, n) { cost(string[i:j+1]) + T[j+1] }
+	"""
+	memo = {} # memoize, otherwise this takes stupid long on repeated subproblems
+	def recurse(i):
+		if i in memo: return memo[i]
+		if i == len(nospace): return (0, "") # we've run off the end (base case)
+
+		best = float('inf') # best cost found for this i
+		parsing = "" # the string parsing associated with that best cost
+		prefix = "" # the pre-space part of the string, for which we can take raw cost directly
+
+		j = i
+		while j < len(nospace):
+			prefix += nospace[j]
+			n_invalid = 0 if prefix in dictionary else len(prefix) + 1 # + 1 term to penalize extra
+				# spaces, since four prefixes lined up as j e s s is traversed before the single
+				# prefix jess, and otherwise both have the same invalid count.
+
+			if n_invalid < best: # if that alone gives worse cost, then no need to recurse
+				n_invalid_sub, parsing_sub = recurse(j+1)
+
+				subproblem_cost = n_invalid + n_invalid_sub
+				if subproblem_cost < best: # if we're still better, then adopt as new best
+					best = subproblem_cost
+					parsing = prefix
+					if len(parsing_sub) > 0: parsing += ' ' + parsing_sub
+
+					if best == 0: break # then we've found an optimal division, so stop
+			j += 1
+
+		memo[i] = (best, parsing)
+		return best, parsing
+
+	return recurse(0)[1]
+
+dictionary = {"look", "looked", "looks", "just", "like", "her", "brother", "time", "this", "is",
+	"favorite", "food"}
+assert thirteen("jesslookedjustliketimherbrother", dictionary) == "jess looked just like tim her brother"
+assert thirteen("thisismikesfavoritefood", dictionary) == "this is mikes favorite food"
+
+import heapq
+
+def fourteen(arr, k, use_heap=False): # smallest k
+	if use_heap:
+		"""The canonical way to do this one is with a heap in O(n log k)
+		"""
+		heap = [-x for x in arr[:k]] # min heap, and I'll need to check against the *largest* of the min values
+		heapq.heapify(heap)			# so put -val in the heap
+
+		for a in arr[k:]:
+			if -a > heap[0]: # if -a > top of heap, then |a| is smaller than |top of heap|
+				heapq.heappush(heap, -a)
+				heapq.heappop(heap)
+
+		return [-x for x in heap]
+	else:
+		"""There is an even more optimal way to do this using rank selection, which takes O(n)
+		"""
 
 
-
-
-
-
+arr = list(range(100)) + list(range(1, 4))
+two(arr) # I could import shuffle, or I could use the one I've defined here.
+assert sorted(fourteen(arr, 10)) == [0, 1, 1, 2, 2, 3, 3, 4, 5, 6]
 
 
 
