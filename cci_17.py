@@ -584,7 +584,11 @@ def eleven(document, word_pairs):
 
 	return dists
 
-lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+lorem_ipsum = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt " + \
+	"ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris " + \
+	"nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit " + \
+	"esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in " + \
+	"culpa qui officia deserunt mollit anim id est laborum."
 assert eleven(lorem_ipsum, [('Lorem', 'ipsum'), ('consectetur', 'in'), ('dolor', 'ut'), ('dolore', 'in'),
 	('ut', 'in')]) == [1, 35, 9, 5, 10]
 
@@ -638,7 +642,7 @@ assert str(dll) == "2<->3<->5<->8<->11<->18<->20->"
 assert dll.prev is None
 
 def thirteen(nospace, dictionary):
-	"""I had to code this one from the solutions before I could begin to undesrtand it. We're splitting
+	"""I had to code this one from the solutions before I could begin to understand it. We're splitting
 	problem(string) into prefix + " " + subproblem(rest of string), basically deciding where to put that
 	space.
 
@@ -711,13 +715,275 @@ def fourteen(arr, k, use_heap=False): # smallest k
 
 		return [-x for x in heap]
 	else:
-		"""There is an even more optimal way to do this using rank selection, which takes O(n)
-		"""
+		"""If k is large, and you're willing to rely on a nondeterministic algorithm, then there is an E[O(n)]
+		algorithm: rank selection!
 
+		1.	Pick a random pivot in the array, and partition elements around the pivot s.t. <=pivot end up to
+			the left, keeping track of the quantity that end up to the left, and the quantity that have value
+			equal to the pivot.
+		2.	- If k falls in [|left|, |left U pivot|), then the k things <= to the pivot are properly placed
+			to the left, and we're done.
+			- If k falls in [0, |left|), then we've separated somewhat, but the k we want to find are on the
+			left still mixed with a few others. Recurse on just the left side.
+			- If k falls in [|left U pivot|, |all|), then the left and pivot sets are properly to the left,
+			but we need an additional k - |left U pivot| elements from the right to get to k. Recurse on just
+			the right side, now looking for the k - |left U pivot|th thing on that side.
+		
+		In expectation, you'll divide the array in two each time you choose a pivot, but then you recurse on
+		only one side and do O(n) work in each subproblem, so the master theorem-style recurrence looks like:
+		T(n) = T(n/2) + O(n) -> Theta(n) https://www.nayuki.io/page/master-theorem-solver-javascript
+		"""
+		def rank(l, r, i):
+			"""Order arr[l:r+1] so that the i smallest things come first.
+			"""
+			pivot = arr[randint(l,r)]
+			lsz, psz = partition(l, r, pivot)
+
+			if i < lsz: # k is to the left
+				rank(l, l + lsz - 1, i)
+			elif i < lsz + psz: # k lands in the pivot set
+				return
+			else: # k is to the right
+				rank(l + lsz + psz, r, i - lsz - psz)
+
+		def partition(l, r, pivot):
+			"""Given a portion of an array and a pivot, swap elements in the array so everything <=pivot
+			lies to left and >pivot lies to right, and return the sizes of the left and pivot sets.
+			"""
+			l0 = l
+			m = l # middle, ends up at the right edge of left U pivot, but throughout it's our working index
+			while m <= r:
+				if arr[m] < pivot: # middle is smaller than the pivot, and left can have any value,
+					t = arr[l]	# so swap arr[m] with arr[l] so we *know* the thing at left is <pivot
+					arr[l] = arr[m]
+					arr[m] = t
+					l += 1 # we know what's at l is gucci, so consider next l
+					m += 1 # don't let middle fall behind left pointer
+
+				elif arr[m] == pivot: # no need to swap anything, just move middle pointer
+					m += 1
+
+				elif arr[m] > pivot: # middle is larger than the pivot, and right has unknown value, so
+					t = arr[r]	# swap arr[m] with arr[r] so we *know* the thing at the right is >pivot
+					arr[r] = arr[m]
+					arr[m] = t # wildcard, bitches!
+					r -= 1 # we know what's at r is gucci, so consider next r
+
+			return l - l0, m - l
+
+		rank(0, len(arr)-1, k)
+		return arr[:k]
 
 arr = list(range(100)) + list(range(1, 4))
-two(arr) # I could import shuffle, or I could use the one I've defined here.
-assert sorted(fourteen(arr, 10)) == [0, 1, 1, 2, 2, 3, 3, 4, 5, 6]
+for i in range(3):
+	two(arr) # I could import shuffle, or I could use the one I've defined here.
+	assert sorted(fourteen(arr, 10, use_heap=True)) == sorted(fourteen(arr, 10, use_heap=False)) == \
+		[0, 1, 1, 2, 2, 3, 3, 4, 5, 6]
+
+def fifteen(words):
+	"""I'm taking inspiration from 13 here. Basically we can split a word in to a prefix and remainder.
+	If the prefix is a valid word from the dictionary, then we're in business, and we just have to
+	check that the remainder is also composed of words from the dictionary. The base cases are when the
+	remainder is a valid word (positive), or when the remainder runs off the end and becomes empty string
+	(negative, so that words can't make themselves positive via prefix=word & remainder="").
+	"""
+	memo = {} # I'm finding it difficult to get a case where this is triggered, but in theory it helps.
+	def recurse(word, i): # boolean, whether composed of other words
+		if word[i:] in memo: return memo[word[i:]]
+
+		if i > 0 and word[i:] in words: return True
+		if i == len(word): return False # base case: run off the end -> True
+
+		prefix = ""
+		j = i
+		while j < len(word): # split dogwalker into d ogwalker, then do gwalker, etc.
+			prefix += word[j]
+			if prefix in words and recurse(word, j+1):
+				if word[i:] not in words: memo[word[i:]] = True
+				return True
+			j += 1
+
+		if word[i:] not in words: memo[word[i:]] = False
+		return False
+
+	longest = 0
+	best = ""
+	for word in words:
+		if len(word) > longest and recurse(word, 0):
+			longest = len(word)
+			best = word
+	return best
+
+words = {"cat", "banana", "ba", "dog", "nana", "walk", "walker", "dogwalker", "beast"}
+assert fifteen(words) == "dogwalker"
+words.add("catbanananana")
+assert fifteen(words) == "catbanananana"
+
+def sixteen(minutes, recurse=False):
+	"""The masseuse has a sequence 30 15 60 75 45 15 15 45. With the first appointement she can do one
+	of two things: accept or reject. Say she accepts, then we know she can't take the next appointment,
+	and the problem becomes [30] 15 (60 75 45 15 15 45). That is, she banks the 30, and to it she can
+	add the best solution to the subproblem in parentheses. Say she rejects, then the best she can do
+	is 30 (15 60 75 45 15 15 45), that is the best solution to the subproblem in parentheses, which,
+	unlike last case, includes the neighboring 15. The base cases are when we get down to two or fewer
+	appointments, where the better choice is to pick the max, or the one.
+	"""
+	n = len(minutes)
+
+	if recurse:
+		memo = {} # This is O(n) with memoization, but it's hard to see,
+		def recurse(i): # and the recursion and memoization means you're using O(n) extra space
+			if i in memo: return memo[i]
+
+			if i == n-1: return minutes[-1]
+			elif i == n-2: return max(minutes[-2:])
+
+			r = max(minutes[i] + recurse(i+2), recurse(i+1))
+			memo[i] = r
+			return r
+
+		return recurse(0)
+	else:
+		"""This really can be done iteratively. T[i] = max(minutes[i] + T[i+2], T[i+1]). Because this
+		recurrence doesn't depend on anything long-term, I can keep all I need in a few variables.
+		"""
+		plus_two = minutes[-1] # start at end of table, where we have base cases
+		plus_one = max(minutes[-2:])
+		for t in reversed(minutes[:-2]): # obviously O(n) time and O(1) space
+			now = max(t + plus_two, plus_one)
+			plus_two = plus_one # back up these pointers
+			plus_one = now
+
+		return now
+
+minutes = [30, 15, 60, 75, 45, 15, 15, 45]
+assert sixteen(minutes, recurse=True) == sixteen(minutes, recurse=False) == 180
+minutes = [75, 105, 120, 75, 90, 135]
+assert sixteen(minutes, recurse=True) == sixteen(minutes, recurse=False) == 330
+
+def seventeen(b, T):
+	"""I thought of Rabin-Karp for this, which would be O(b |T|)ish, I think. The hints seem to want you
+	to use a prefix tree, which makes it O(bt), where t is the length of the longest string in T (though
+	you'll dip out a lot earlier most times in practice). Which to prefer kind of depends on whether you
+	have few long strings or many short ones to match against. The problem says "small", though.
+	"""
+	n = len(b)
+
+	prefix_tree = {} # My favorite way to do prefix trees in python is just telescoping dictionaries.
+	for t in T: # O(|T| * t)
+		d = prefix_tree
+		for c in t:
+			if c not in d:
+				d[c] = {}
+			d = d[c]
+		d[0] = t # to denote the end of something, handy to keep the string in the termination node
+	
+	mapping = defaultdict(list) # from t in T -> lists of locations 
+
+	for i in range(n): # O(b)
+		d = prefix_tree
+
+		j = i
+		while j < n and d: # O(t)
+			c = b[j]
+			d = d.get(c, None)
+			if d and 0 in d: # then we've found a termination, so add i to the corresponding string's mapping
+				mapping[d[0]].append(i)
+			j += 1
+
+	return mapping
+
+b = "dogcatcatdogdoggocatticusfeldsparcatcatheter"
+T = ["dog", "cat", "cab", "catheter"]
+mapping = seventeen(b, T)
+assert len(mapping) == 3
+assert mapping['dog'] == [0, 9, 12]
+assert mapping['cat'] == [3, 6, 17, 33, 36]
+assert mapping['catheter'] == [36]
+
+def eighteen(arr, els, counter_strategy=True):
+	n = len(arr)
+	m = len(els)
+
+	if not counter_strategy:
+		"""Looking at this I decided to just copy out all the locations of each element in to lists and ponder
+		them. What jumped out at me is that it's very similar to finding the diff between two elements (problem
+		17.11) once you've got those lists, which in turn is very similar to a mergesort merge, except here you
+		could have a 3-or-more-way merge happening. But the procedure is easy: a points to the first location of
+		the first el, b to the first location of the second, etc. The max difference when you put them on a
+		number line is the width of the subarray containing them all, and then you scoot the lowest one forward
+		and try again, keeping track of the min diff and the endpoints as you go. A neat thing to realize here
+		is that because we only use one value from those notional lists at a time, we don't really need to
+		precompute them; we can just iterate them along the array looking for the next occurrence of an element,
+		thereby saving memory.
+		"""
+		els = list(els) # call |els| m
+
+		pointers = [0]*len(els) # initialize pointers to point to the first of each occurrence of the elements
+		for i,el in enumerate(els):
+			for j,a in enumerate(arr):
+				if a == el:
+					pointers[i] = j
+					break
+
+		best = [0, len(arr)-1]
+
+		while True: # O(nm + m*?), pointers take turns being the lowest one, and we have to scoot them all near
+			minest = min(pointers) # the end of the array in the worst case, and we do extra work to find the min.
+			maxest = max(pointers) # several O(m) things going on here. This could be a little faster with a heap
+			for i,p in enumerate(pointers):
+				if p == minest:
+					break # leaves i at the index of the lowest pointer
+
+			if maxest - minest < best[1] - best[0]:
+				best = [minest, maxest]
+
+			for j in range(pointers[i]+1,n): # O(n) by the time we're through all the consecutive while loops
+				if arr[j] == els[i]:
+					pointers[i] = j
+					break # don't hit the else condition
+			else: # if we didn't find a next els[i] to point to, then we've covered all the subarrays containing
+				break # them all. Stop the while loop.
+
+		return best
+	else:
+		"""There is a fundamentally better way based on iterating endpoints forward and keeping track of how
+		many of each element lie in that range. First run the front forward until we've got at least one of
+		each el, then iterate the back one forward, updating counts until we hit 0 for one of them, then
+		iterate forward again until we fill that zero back in. Keep going until we've covered the array.
+		"""
+		rear = 0 # I'm considering rear to be inclusive and lead to be exclusive, so the range
+		lead = 0 # is [rear, lead). It makes some of the loop logic nicer.
+		n_nonzero = 0 # This is the trick, because if n_nonzero == m, then we don't have to iterate dictionary 
+		c = defaultdict(int) # keys to tell that c has >0 at every location
+		
+		best = [0, n-1]
+		while lead < n: # O(n)
+			if n_nonzero == m: # with this rear and lead, all counts are >0
+				if lead-1 - rear < best[1] - best[0]: # update best if current range is smaller
+					best = [rear, lead-1]
+
+				x = arr[rear] # we're removing an x from our range
+				if x in els: # if it's an element we care about, then update the count
+					c[x] -= 1
+					if c[x] == 0: # if the count hits zero, then unset the flag
+						n_nonzero -= 1
+				rear += 1
+
+			else: # not all counts are >0
+				x = arr[lead] # we're adding this element to our range
+				if x in els: # if it's one we care about
+					if c[x] == 0: # then if it's the one we're missing, we can set the flag
+						n_nonzero += 1
+					c[x] += 1 # and update the count
+				lead += 1
+
+		return best
+
+arr = [7, 5, 9, 0, 2, 1, 3, 5, 7, 9, 1, 1, 5, 8, 8, 9, 7]
+els = set([1, 5, 9])
+assert eighteen(arr, els, counter_strategy=False) == eighteen(arr, els, counter_strategy=True) == [7,10]
+
 
 
 

@@ -130,7 +130,7 @@ class Four:
 		# If we make it this far, no cycles, and we're good.
 		return [self.locks[i] for i in lock_ndxs]
 
-	def _find_cycle(self, white, grey, u):
+	def _find_cycle(self, white, grey, u): # start at u node, and do a dfs
 		# Finding cycles is stupid tricky. Took me quite a while, but finally this article
 		# saved me: https://www.geeksforgeeks.org/detect-cycle-direct-graph-using-colors/
 		white.remove(u) # change color from white to grey (unexplored -> exploring)
