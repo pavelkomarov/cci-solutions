@@ -1020,9 +1020,49 @@ def nineteen(arr):
 arr = [1,2,3,5,6,8,9]
 assert sorted(nineteen(arr)) == [4,7]
 
+class Twenty:
+	def __init__(self):
+		self.top_half = [] # min heap
+		self.bottom_half = [] # max heap
 
+	def push(self, a):
+		"""Let's say I want the lower heap to always be equal size to the top heap, or +1 larger. (You
+		could also allow 1 smaller, but it adds more cases to the logic.) Along comes a.
+		If |bottom| == |top|
+			then if a > top of the top heap, then it has to go in the top heap, and then we have to move
+				the top of the top heap to the bottom heap to make the bottom heap the larger.
+			if a <= top of the top heap, then a can just go in the bottom heap, and no rebalance
+		If |bottom| > |top|
+			then if a < -top of the bottom heap, then it (as -a) needs to go in the bottom heap, and we
+				neet to rebalance by moving the top of the bottom heap to the top heap
+			if a >= -top of the bottom heap, then a can safely be put in the top heap, and no rebalance
+		
+		"""
+		if len(self.top_half) == len(self.bottom_half):
+			if len(self.top_half) > 0 and a > self.top_half[0]: # len >0 check to handle very beginning when
+				heapq.heappush(self.top_half, a)				# both heaps are empty
+				heapq.heappush(self.bottom_half, -heapq.heappop(self.top_half))
+			else:
+				heapq.heappush(self.bottom_half, -a)
+		else:
+			if a < -self.bottom_half[0]:
+				heapq.heappush(self.bottom_half, -a)
+				heapq.heappush(self.top_half, -heapq.heappop(self.bottom_half))
+			else:
+				heapq.heappush(self.top_half, a)
 
+	def median(self):
+		"""If there are an even number of things, the median is defined as the average of the two center
+		ones. Otherwise, median is the actual center thing.
+		"""
+		if len(self.top_half) == len(self.bottom_half):
+			return (self.top_half[0] - self.bottom_half[0])/2.0
+		else: # len(self.bottom_half) > len(self.top_half)
+			return -self.bottom_half[0]
 
-
-
-
+medi = Twenty()
+arr = list(range(-1000, 1000))
+two(arr) # shuffle
+for i,a in enumerate(arr):
+	medi.push(a)
+	assert medi.median() == numpy.median(arr[:i+1])
