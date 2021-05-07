@@ -917,7 +917,7 @@ def eighteen(arr, els, counter_strategy=True):
 		precompute them; we can just iterate them along the array looking for the next occurrence of an element,
 		thereby saving memory.
 		"""
-		els = list(els) # call |els| m
+		els = list(els)
 
 		pointers = [0]*len(els) # initialize pointers to point to the first of each occurrence of the elements
 		for i,el in enumerate(els):
@@ -928,7 +928,7 @@ def eighteen(arr, els, counter_strategy=True):
 
 		best = [0, len(arr)-1]
 
-		while True: # O(nm + m*?), pointers take turns being the lowest one, and we have to scoot them all near
+		while True: # O(nm), I think. Pointers take turns being the lowest one, and we have to scoot them all near
 			minest = min(pointers) # the end of the array in the worst case, and we do extra work to find the min.
 			maxest = max(pointers) # several O(m) things going on here. This could be a little faster with a heap
 			for i,p in enumerate(pointers):
@@ -983,6 +983,43 @@ def eighteen(arr, els, counter_strategy=True):
 arr = [7, 5, 9, 0, 2, 1, 3, 5, 7, 9, 1, 1, 5, 8, 8, 9, 7]
 els = set([1, 5, 9])
 assert eighteen(arr, els, counter_strategy=False) == eighteen(arr, els, counter_strategy=True) == [7,10]
+
+def nineteen(arr):
+	"""If we're missing one number, then this problem has a famous solution: len(arr) = N - 1 -> sum from
+	1 to N is N(N+1)//2 = k. sum(arr) = k'. missing = k - k'. O(n) time, O(1) space, very clean.
+
+	If we're missing a second number, then we can do something similar: len(arr) = N - 2 -> sum from 1 to
+	N is N(N+1)//2 = k. sum(arr) = k'. missing1 + missing2 = k - k'. The problem is we have two unknowns,
+	so we need two equations to lock them down.
+
+	I initially tried xoring everything, but mixing numerical and boolean algebra resulted in nonunique
+	solutions: xor([1,2,3,5,6,8,9]) = 2, xor([1..9]) = 1 -> xor = 3. sum diff comes out to 11, so
+	m1^m2 = 3, m1+m2=11. The pair (4,7) solves it, but so does (5,6)!
+
+	A good second equation candidate is the sum of the squares of the numbers, but there are many choices.
+	Upon searching, I find it also has a closed form: N(N + 1)(2N + 1)//6. Very cool.
+	https://www.quora.com/What-is-the-derivation-for-the-sum-of-square-of-1st-n-natural-numbers
+	"""
+	N = len(arr) + 2
+	k = N*(N+1)//2
+	k2 = N*(N+1)*(2*N+1)//6
+	kprime = 0
+	k2prime = 0
+	for x in arr:
+		kprime += x
+		k2prime += x**2
+	A = k - kprime
+	B = k2 - k2prime
+
+	# m1 + m2 = A -> m2 = A - m1
+	# m1^2 + m2^2 = B -> m1^2 + (A-m1)^2 = B -> 2m1^2 - 2Am1 + (A^2 - B) = 0
+	m1 = int(2*A - (4*A**2 - 4*2*(A**2-B))**0.5)//4
+	m2 = A - m1
+	return m1, m2
+
+arr = [1,2,3,5,6,8,9]
+assert sorted(nineteen(arr)) == [4,7]
+
 
 
 
