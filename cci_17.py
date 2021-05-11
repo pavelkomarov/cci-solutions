@@ -1036,7 +1036,6 @@ class Twenty:
 			then if a < -top of the bottom heap, then it (as -a) needs to go in the bottom heap, and we
 				neet to rebalance by moving the top of the bottom heap to the top heap
 			if a >= -top of the bottom heap, then a can safely be put in the top heap, and no rebalance
-		
 		"""
 		if len(self.top_half) == len(self.bottom_half):
 			if len(self.top_half) > 0 and a > self.top_half[0]: # len >0 check to handle very beginning when
@@ -1066,3 +1065,252 @@ two(arr) # shuffle
 for i,a in enumerate(arr):
 	medi.push(a)
 	assert medi.median() == numpy.median(arr[:i+1])
+
+def twentyone(arr, simplified=True):
+	if not simplified:
+		"""The idea here is that the tallest bar divides the problem in to left and right, and then the
+		next-tallest bar to each side will hold in the most water, and then we search for the next-tallest
+		again to each side of those until we run out, subtracting away submerged bars by iterating between
+		tallest and next-tallest as we go.
+
+		To support finding the next-tallest to each side quickly, I create a couple dictionaries to map from
+		bar height -> location and height of next-tallest.
+		"""
+		l = {} # grow to O(n) space
+		r = {}
+
+		m = 0
+		x = 0
+		for i,a in enumerate(arr): # O(n)
+			if a > m:
+				l[a] = (m, x) # keep track of where next-tallest to left was
+				m = a
+				x = i
+
+		m = 0
+		x = len(arr) - 1
+		for i in range(len(arr)-1, -1, -1): # O(n)
+			a = arr[i]
+			if a > m:
+				r[a] = (m, x) # keep track of where next-tallest to right was
+				m = a
+				x = i
+
+		# m = 6, x = 5
+		s = 0
+		c = m
+		j = x
+		while c in r: # chain through next-tallests to the right
+			c, k = r[c]
+			for i in range(j+1, k): # O(n) all together
+				s -= arr[i] # subtract out submerged bars
+			s += c*(k - j - 1)
+			j = k
+
+		c = m
+		j = x
+		while c in l: # chain through next-tallests to the left
+			c, k = l[c]
+			for i in range(k+1, j): # O(n) all together
+				s -= arr[i] # subtract out submerged bars
+			s += c*(j - 1 - k)
+			j = k
+
+		return s
+	else:
+		"""The above is less elegant than I'd like, because it depends on juggling a lot of variables and
+		careful indexing. An alternative solution is to keep the running-maxes for left and right passes in
+		arrays (or could be maps, but we'll need to key on exactly each location anyway). The water height
+		at each location is now given by the min of the maxes to each location's left and right, and if
+		there is a histogram bar here too, then that displaces some water.
+		"""
+		r = [arr[-1]]
+		for a in reversed(arr[:-1]): # build running maxes for right in O(n)
+			r.insert(0, max(a, r[0]))
+		
+		l = float('-inf') # the running max for the left, just a single variable to save space
+		s = 0
+		for i,a in enumerate(arr):
+			l = max(a, l) 			# height for location i is min(left_max[i], right_max[i])
+			s += min(l, r[i]) - arr[i] # subtract off any histogram bar height that lives here too
+
+		return s
+
+arr = [0,0,4,0,0,6,0,0,3,0,5,0,1,0,0]
+assert twentyone(arr, simplified=False) == twentyone(arr, simplified=True) == 26
+arr = [0,0,4,0,0,6,0,0,3,0,8,0,2,0,5,2,0,3,0,0]
+assert twentyone(arr, simplified=False) == twentyone(arr, simplified=True) == 46
+
+def twentytwo(source, dest, dictionary):
+	"""Use a BFS. I'm choosing to search from both ends, because this is going to get explosively large for
+	a large dictionary, and we can take the number of nodes we have to explore down dramatically if we search
+	from both ends. E.g., say each time we explore a node we find b additional nodes to add to the queue,
+	and say the distance between the source and destination is k, then we search b^k. But if we divide in two
+	to search from both ends, we get there in 2*b^(k/2), and our visited sets get to stay smaller likewise.
+	"""
+	one_away = defaultdict(set) # O(|dictionary|^2) to generate, this basically becomes the graph
+	for A in dictionary:
+		for i in range(len(A)):
+			k = A[:i] + '_' + A[i+1:]
+			for B in dictionary:
+				if A[:i] == B[:i] and A[i+1:] == B[i+1:]:
+					one_away[k].add(A)
+					one_away[k].add(B)
+	A = source
+	B = dest
+	ancestorsA = {A: None} # also serves as visited set
+	ancestorsB = {B: None}
+	qA = []
+	qB = []
+
+	while A not in ancestorsB and B not in ancestorsA:
+
+		for i,c in enumerate(A): # search forward
+			k = A[:i] + '_' + A[i+1:]
+			for candidateA in one_away[k]:
+				if candidateA not in ancestorsA:
+					qA.append(candidateA)
+					ancestorsA[candidateA] = A
+
+		for i,c in enumerate(B): # search backward
+			k = B[:i] + '_' + B[i+1:]
+			for candidateB in one_away[k]:
+				if candidateB not in ancestorsB:
+					qB.append(candidateB)
+					ancestorsB[candidateB] = B
+
+		A = qA.pop(0)
+		B = qB.pop(0)
+
+	# recover the path
+	K = A if A in ancestorsB else B
+	path = [K]
+	Y = ancestorsA[K]
+	while Y is not None:
+		path.insert(0, Y)
+		Y = ancestorsA[Y]
+	Y = ancestorsB[K]
+	while Y is not None:
+		path.append(Y)
+		Y = ancestorsB[Y]
+	return path
+
+dictionary = {'damp', 'like', 'lamp', 'limp', 'lime', 'like', 'bike', 'camp', 'time', 'line'}
+assert twentytwo('damp', 'like', dictionary) == ['damp', 'lamp', 'limp', 'lime', 'like']
+
+def twentythree(M):
+	"""There is 1 NxN square in M, 4 (N-1)x(N-1) squares, 9 (N-2)x(N-2) squares, 25 (N-3)x(N-3) squares ...
+	Sum this up and it's the sum of squared 1,2,3,4,5 ..., which in 17.19 I learned is N(N+1)(2N+1)/6. This
+	means there are O(N^3) subsquares in M. The hints say that's the runtime we should seek to achieve, so
+	it's reasonable to think this comes from fundamentally having to visit every subsquare in the worst
+	case.
+
+	To naively calculate whether a square has an all-black border, we have to iterate along the four edges,
+	incurring an additional O(N) cost. It strikes me that the way to get down to O(N^3) all together is
+	probably to make this border check O(1). What preprocessing can we do? The last hint kind of spells it
+	out, but it took me some reflection to understand: Let's loop over the array storing how many black
+	squares are above and to the left of each square. Then if we want to check whether a border is all black
+	we can take the diff of these num-black values for corners of the subsquare, because if the diff == the
+	side length of the subsquare, then all cells in between must be black.
+	"""
+	N = len(M)
+	T = numpy.zeros((2, N+1, N+1), dtype=int) # I need (N+1)x(N+1) to index cleanly
+	T[0,1:,1:] = numpy.cumsum(M, axis=0) # I'm storing black above in front, black left in back
+	T[1,1:,1:] = numpy.cumsum(M, axis=1) # O(N^2) to build T
+
+	# generate all subsquares
+	for L in range(N, 0, -1):
+		for i in range(N-L+1):
+			for j in range(N-L+1):
+				# the corners are at (i,j), (i+L,j), (i,j+L), (i+L,j+L) in T. This actually runs off the
+				# square in M, and I need to be careful to subtract elements which are L apart in T.
+				# For example: M = [[0 0 0 0] yields T[1] =[[0 0 0 0 0]
+				#					[0 1 1 1]				[0 0 0 0 0]
+				#					[0 1 0 1]				[0 0 1 2 3]
+				#					[0 1 1 1]]				[0 0 1 1 2]
+				#											[0 0 1 2 3]]
+				# Say i,j = 1,1 and L = 3, then to properly check top and bottom rows, we have to subtract
+				# T[4,4] - T[4,1] and T[2,4] - T[2,1]. Notice that we're operating over a rectangle that
+				# runs off the square only in the horizontal direction. For vertical edges, it's analogous.
+				if T[0,i+L,j+L] - T[0,i,j+L] == L and T[0,i+L,j+1] - T[0,i,j+1] == L and \
+					T[1,i+L,j+L] - T[1,i+L,j] == L and T[1,i+1,j+L] - T[1,i+1,j] == L:
+					return i,j,L
+
+M = [[0, 0, 0, 0,],
+	[0, 1, 1, 1,],
+	[0, 1, 0, 1,],
+	[0, 1, 1, 1,]]
+assert twentythree(M) == (1,1,3)
+M = [[0, 1, 0],
+	[1, 1, 0],
+	[1, 1, 0]]
+assert twentythree(M) == (1,0,2)
+
+def twentyfour(M):
+	"""In order to select a submatrix, we place 4 pointers: xlo, xhi, ylo, yhi. That takes us up to O(N^4).
+	Then we have to sum over each submatrix, which incurs an extra O(N^2). Gross.
+
+	First, observe that if we take a cumsum in one dimension and then a cumsum of the cumsum in the other
+	dimension, we get the sum of everything up and left in the array. Then we can subtract away different
+	cumsum terms to get the sum of any submatrix in O(1). That solves one problem.
+
+	Next, consider the way we solve the 1D case: iterate along keeping a cumsum and a best, resetting the
+	cumsum to 0 every time it dips below 0. If I choose the two pointers along one edge, say which rows I
+	want my submatrix to be between, then I can use a very similar principle to find the best submatrix
+	in O(N) by iterating along adding the right pieces of columns, resetting as necessary. It will still
+	take O(N^2) to choose where to put those two pointers, making the total run time O(N^3). We actually
+	don't need the double-cumsum here either, just the cumsum of columns.
+	"""
+	N = len(M)
+	T = numpy.zeros((N+1, N), dtype=int)
+	T[1:,:] = numpy.cumsum(M, axis=0)
+
+	best = float('-inf')
+	rect = (0, float('inf'), 0, float('inf'))
+	for r1 in range(N):
+		for r2 in range(r1, N):
+			s = 0
+			c1 = 0
+			for c2 in range(N):
+				s += T[r2+1,c2] - T[r1,c2]
+				if s > best or s == best and (r2 - r1)*(c2-c1) < (rect[1]-rect[0])*(rect[3]-rect[2]):
+					best = s
+					rect = (r1,r2,c1,c2)
+				elif s <= 0:
+					s = 0
+					c1 = c2+1
+
+	return best, rect
+
+assert twentyfour(M) == (5, (0, 2, 0, 1))
+M = [[0, 0, 0, 0,],
+	[0, 1, 1, 1,],
+	[0, 1, 0, 1,],
+	[0, 1, 1, 1,]]
+assert twentyfour(M) == (8, (1, 3, 1, 3))
+M = [[8, 8, 0, -3, 3, -2, -10, 10, -4, -3],
+	[1, 0, -6, 6, 4, 7, -10, 7, 0, 8],
+	[-3, 6, 5, 9, 7, 6, 0, -2, -4, -5],
+	[8, -2, 10, -8, -3, -4, -10, 6, 10, -4],
+	[-4, -2, 10, 10, 2, 0, -10, 10, 1, 7],
+	[8, 0, -5, 4, 2, 7, 10, -9, -10, -8],
+	[-6, 1, -5, -4, -8, -5, -10, -1, -7, -6],
+	[-3, 2, 2, 4, -2, 10, -10, 6, 1, -6],
+	[-7, 9, 3, 2, -4, -4, 2, -1, -5, 10],
+	[9, 6, -5, 10, 5, -6, 6, -7, 4, 1]]
+# I'm actually coding the O(N^6) brute-force way to check this, because I can't make heads or tails manually
+best = 0
+for r1 in range(10):
+	for r2 in range(r1,10):
+		for c1 in range(10):
+			for c2 in range(c1,10):
+				s = 0
+				for i in range(r1,r2+1):
+					for j in range(c1,c2+1):
+						s += M[i][j]
+				if s > best:
+					best = s
+					rect = (r1,r2,c1,c2)
+assert twentyfour(M) == (best, rect)
+
+
