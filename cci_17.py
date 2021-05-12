@@ -1405,13 +1405,48 @@ haars
 ecrus
 dassy"""
 
-def twentysix():
-	pass
+def twentysix(documents, sol=2):
+	similarities = {}
+	
+	if sol == 1:
+		"""Brute force is just compare all documents against all other documents, calculating IoU for each
+		pair, storing the nonzero ones.
+		"""
+		documents = [set(d) for d in documents]
 
+		for i,A in enumerate(documents): # O(|documents|^2 * |length of document pairs|)
+			for j in range(i+1,len(documents)):
+				B = documents[j]
+				I = len(A & B)
+				iou = I / (len(A) + len(B) - I)
+				if iou > 0:
+					similarities[(i,j)] = iou
 
+		return similarities
 
+	elif sol == 2:
+		"""A quicker solution is to go element-wise, mapping from element to which documents contain that
+		element.
+		"""
+		els = defaultdict(list) # keep track of where words appear
+		for i,d in enumerate(documents): # build in O(|length of all documents|)
+			for w in d:
+				els[w].append(i)
 
+		I = defaultdict(int) # count up number of commonalities between document pairs
+		for w in els:
+			l = els[w] # all possible (i,j) pairs in l get +1 to the size of their intersection
+			m = len(l)
+			if m > 0:
+				for a,i in enumerate(l):
+					for b in range(a+1, m):
+						j = l[b]
+						I[(i,j)] += 1 # 
 
+		for i,j in I: # calculate IoUs from nonzero intersections
+			similarities[(i,j)] = I[(i,j)] / (len(documents[i]) + len(documents[j]) - I[(i,j)])
 
+		return similarities
 
-
+documents = [[14,15,100,9,3], [32,1,9,3,5], [15,29,2,6,8,7], [7,10]]
+assert twentysix(documents, sol=1) == twentysix(documents, sol=2) == {(0, 1): 0.25, (0, 2): 0.1, (2, 3): 1./7}
