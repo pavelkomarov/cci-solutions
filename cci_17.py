@@ -1255,11 +1255,11 @@ def twentyfour(M):
 	cumsum terms to get the sum of any submatrix in O(1). That solves one problem.
 
 	Next, consider the way we solve the 1D case: iterate along keeping a cumsum and a best, resetting the
-	cumsum to 0 every time it dips below 0. If I choose the two pointers along one edge, say which rows I
-	want my submatrix to be between, then I can use a very similar principle to find the best submatrix
-	in O(N) by iterating along adding the right pieces of columns, resetting as necessary. It will still
-	take O(N^2) to choose where to put those two pointers, making the total run time O(N^3). We actually
-	don't need the double-cumsum here either, just the cumsum of columns.
+	cumsum to 0 every time it dips below 0. If I choose the two pointers along one edge to define which rows
+	I want my submatrix to be between, then I can use a very similar principle to find the best submatrix in
+	O(N) by iterating along, adding the right pieces of columns, resetting as necessary. It will still take
+	O(N^2) to choose where to put those two pointers, making the total run time O(N^3). We actually don't
+	need the double-cumsum here either, just the cumsum of columns, which makes indexing easier.
 	"""
 	N = len(M)
 	T = numpy.zeros((N+1, N), dtype=int)
@@ -1267,18 +1267,18 @@ def twentyfour(M):
 
 	best = float('-inf')
 	rect = (0, float('inf'), 0, float('inf'))
-	for r1 in range(N):
+	for r1 in range(N): # choose two row pointers (inclusive)
 		for r2 in range(r1, N):
 			s = 0
 			c1 = 0
-			for c2 in range(N):
-				s += T[r2+1,c2] - T[r1,c2]
-				if s > best or s == best and (r2 - r1)*(c2-c1) < (rect[1]-rect[0])*(rect[3]-rect[2]):
-					best = s
+			for c2 in range(N): # iterate rightward, including new columns
+				s += T[r2+1,c2] - T[r1,c2] # get the sum of the fractional column in O(1)
+				if s > best or s == best and (r2-r1)*(c2-c1) < (rect[1]-rect[0])*(rect[3]-rect[2]):
+					best = s # if we get a higher sum, or the same sum in smaller area, save
 					rect = (r1,r2,c1,c2)
-				elif s <= 0:
+				elif s <= 0: # if we dip to or below zero, bring the left edge of the submatrix forward
 					s = 0
-					c1 = c2+1
+					c1 = c2+1 # +1 because we don't want to include this column that just made us go negative
 
 	return best, rect
 
@@ -1288,18 +1288,10 @@ M = [[0, 0, 0, 0,],
 	[0, 1, 0, 1,],
 	[0, 1, 1, 1,]]
 assert twentyfour(M) == (8, (1, 3, 1, 3))
-M = [[8, 8, 0, -3, 3, -2, -10, 10, -4, -3],
-	[1, 0, -6, 6, 4, 7, -10, 7, 0, 8],
-	[-3, 6, 5, 9, 7, 6, 0, -2, -4, -5],
-	[8, -2, 10, -8, -3, -4, -10, 6, 10, -4],
-	[-4, -2, 10, 10, 2, 0, -10, 10, 1, 7],
-	[8, 0, -5, 4, 2, 7, 10, -9, -10, -8],
-	[-6, 1, -5, -4, -8, -5, -10, -1, -7, -6],
-	[-3, 2, 2, 4, -2, 10, -10, 6, 1, -6],
-	[-7, 9, 3, 2, -4, -4, 2, -1, -5, 10],
-	[9, 6, -5, 10, 5, -6, 6, -7, 4, 1]]
-# I'm actually coding the O(N^6) brute-force way to check this, because I can't make heads or tails manually
+M = [[randint(-10,10) for x in range(10)] for y in range(10)]
+# I'm actually coding the O(N^6) brute-force way to check this
 best = 0
+rect = (0, float('inf'), 0, float('inf'))
 for r1 in range(10):
 	for r2 in range(r1,10):
 		for c1 in range(10):
@@ -1308,9 +1300,118 @@ for r1 in range(10):
 				for i in range(r1,r2+1):
 					for j in range(c1,c2+1):
 						s += M[i][j]
-				if s > best:
+				if s > best or s == best and (r2-r1)*(c2-c1) < (rect[1]-rect[0])*(rect[3]-rect[2]):
 					best = s
 					rect = (r1,r2,c1,c2)
-assert twentyfour(M) == (best, rect)
+assert twentyfour(M) == (best, rect), [twentyfour(M), (best, rect)]
+
+def twentyfive(dictionary):
+	"""This problem is legit insane. It has recursion, prefix trees, hash maps, clever looping, and object
+	oriented design. This is just my best translation of the solution into Python. Gayle stresses that for
+	something this complex, you're going to be writing pseudocode, but I'd have a lot of trouble coming up
+	with a workable solution design without some guidance from the interviewer. Guidance is the only way to
+	make this one not evil.
+	"""
+	by_length = defaultdict(list)
+	longest = 0
+	for x in dictionary:
+		by_length[len(x)].append(x)
+		longest = max(longest, len(x))
+
+	prefix_trees = {} # map from word length -> prefix tree
+
+	class Rectangle:
+		"""This I coded myself just from the general idea of what the methods need to do. Keeping
+		some of this complexity inside makes the makeRect recursion tractable."""
+		def __init__(self, data=[]):
+			self.rows = data
+
+		def __len__(self):
+			return len(self.rows)
+
+		def __repr__(self):
+			return '\n'.join(self.rows)
+
+		def isValid(self, vocab):
+			"""Check whether all column-words are in by_length[j]"""
+			for k in range(len(self.rows[0])):
+				col = ""
+				for j in range(len(self.rows)):
+					col += self.rows[j][k]
+
+				if col not in vocab: return False
+
+			return True
+
+		def isPartialValid(self, prefix_tree):
+			"""Check whether all column-words are prefixes in prefix_trees[j]"""
+			if len(self.rows) == 0: return True
+
+			for k in range(len(self.rows[0])):
+				d = prefix_tree
+				for j in range(len(self.rows)):
+					c = self.rows[j][k]
+					if c in d:
+						d = d[c]
+					else:
+						return False
+
+			return True
+
+		def stack(self, word):
+			"""Return a new rectangle with an additional row-word"""
+			return Rectangle(self.rows + [word])
+
+	def makeRect(i, j):
+		if len(by_length[i]) == 0 or len(by_length[j]) == 0: return
+
+		# Make prefix tree for words of length j. i dimension doesn't need a prefix tree.
+		# Doing this here means we only make the prefix trees we need.
+		if j not in prefix_trees:
+			prefix_trees[j] = {}
+			for word in by_length[j]: # O(|dictionary| * |word|)
+				d = prefix_trees[j]
+				for c in word:
+					if c not in d:
+						d[c] = {}
+					d = d[c]
+				d[0] = word # at the leaf, store the word
+
+		return makePartialRect(i, j, Rectangle())
+
+	def makePartialRect(i, j, rect):
+		if len(rect) == j and rect.isValid(by_length[j]):
+			return rect # check if all columns are valid words
+
+		elif rect.isPartialValid(prefix_trees[j]):
+			for next_word in by_length[i]:
+				r = makePartialRect(i, j, rect.stack(next_word))
+				if r: return r
+
+	# This loop iterates from largest possible rectangle down to smallest
+	for z in range(longest**2, 0, -1):
+		for i in range(1, longest+1): # z = i * j
+			if z % i == 0:
+				j = z//i
+				if j <= longest:
+					# attempt to create an i x j rectangle
+					r = makeRect(i, j)
+					if r: return r
+
+dictionary = [x.strip() for x in open('dictionary.txt') if len(x) <= 6] # limit size so this doesn't take ages
+assert str(twentyfive(dictionary)) == """aahed
+abaca
+haars
+ecrus
+dassy"""
+
+def twentysix():
+	pass
+
+
+
+
+
+
 
 
