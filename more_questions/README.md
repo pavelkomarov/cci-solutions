@@ -1,0 +1,1 @@
+This is a folder for questions I've been asked in interviews that I thought were really interesting. Some of these aren't on Leetcode.
